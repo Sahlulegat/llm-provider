@@ -107,6 +107,12 @@ runcmd:
   - systemctl enable llm-provider.service
   - systemctl start llm-provider.service
 
+  # Wait for Ollama to be ready and auto-pull model
+  - echo "Waiting for Ollama to be ready..." >> /var/log/cloud-init-output.log
+  - sleep 60
+  - docker exec ollama-provider ollama pull gpt-oss:120b
+  - echo "Model gpt-oss:120b pulled successfully at $(date)" >> /var/log/cloud-init-output.log
+
   # Log completion
   - echo "LLM Provider setup completed at $(date)" >> /var/log/cloud-init-output.log
 

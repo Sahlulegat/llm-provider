@@ -1,26 +1,39 @@
 # LLM Provider - Guide de démarrage rapide
 
-## Lancement du service
+## Installation
 
-### 1. Allez dans le bon répertoire
+### 1. Clonez le projet depuis GitHub
 
 ```bash
-cd /opt/projects/llm-provider
+git clone https://github.com/Sahlulegat/llm-provider.git
+cd llm-provider
+```
+
+### 2. Configurez l'environnement
+
+```bash
+# Copiez le fichier d'exemple
+cp .env.example .env
+
+# Générez une clé Fernet pour Open WebUI
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# Éditez .env et ajoutez la clé générée à WEBUI_SECRET_KEY
+nano .env
+```
+
+## Lancement du service
+
+### 1. Assurez-vous d'être dans le bon répertoire
+
+```bash
+pwd
+# Doit afficher le chemin vers llm-provider
 ```
 
 **IMPORTANT**: Vous DEVEZ être dans ce répertoire pour que `make` fonctionne!
 
-### 2. Vérifiez que vous êtes au bon endroit
-
-```bash
-pwd
-# Doit afficher: /opt/projects/llm-provider
-
-ls Makefile
-# Doit afficher: Makefile
-```
-
-### 3. Lancez le service
+### 2. Lancez le service
 
 ```bash
 make start
@@ -28,14 +41,14 @@ make start
 
 ## Si vous obtenez "No rule to make target start"
 
-Cela signifie que vous n'êtes PAS dans le bon répertoire. Solution:
+Cela signifie que vous n'êtes PAS dans le répertoire du projet. Solution:
 
 ```bash
 # Vérifiez où vous êtes
 pwd
 
-# Allez dans le bon répertoire
-cd /opt/projects/llm-provider
+# Allez dans le répertoire du projet
+cd llm-provider  # ou le chemin complet
 
 # Relancez
 make start
@@ -88,7 +101,7 @@ Au premier démarrage avec `MODEL_PULL_ON_START=true`:
 ## Troubleshooting
 
 ### "No rule to make target start"
-→ Vous n'êtes pas dans `/opt/projects/llm-provider`
+→ Vous n'êtes pas dans le répertoire du projet `llm-provider`
 
 ### "Permission denied"
 ```bash
@@ -114,10 +127,13 @@ docker logs ollama-provider
 df -h
 ```
 
-## Pour le déploiement UpCloud
+## Déploiement automatique sur UpCloud
 
-Voir [`deployment/README.md`](deployment/README.md) pour:
-- Déploiement avec Terraform
-- Déploiement avec Cloud-Init
-- Configuration production
-- Sécurité et monitoring
+Le projet inclut un fichier `cloud-init.yml` pour déployer automatiquement tout le stack:
+- Clone automatique depuis GitHub
+- Installation de Docker + NVIDIA Container Toolkit
+- Configuration automatique avec clé Fernet générée
+- Démarrage automatique du service au boot
+- Le modèle reste chargé indéfiniment en mémoire (OLLAMA_KEEP_ALIVE=-1)
+
+Voir [`deployment/README.md`](deployment/README.md) et [`deployment/upcloud/cloud-init.yml`](deployment/upcloud/cloud-init.yml)

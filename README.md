@@ -2,6 +2,23 @@
 
 Infrastructure-as-Code pour déployer un provider LLM basé sur Ollama avec le modèle GPT-OSS 120B.
 
+**GitHub Repository**: https://github.com/Sahlulegat/llm-provider
+
+## Démarrage Rapide
+
+```bash
+# Clone le projet
+git clone https://github.com/Sahlulegat/llm-provider.git
+cd llm-provider
+
+# Configure l'environnement
+cp .env.example .env
+# Éditez .env pour ajouter votre clé WEBUI_SECRET_KEY
+
+# Lance les services
+make start
+```
+
 ## Interface Web Incluse!
 
 Ce setup inclut **Open WebUI**, une interface web moderne type ChatGPT pour interagir avec vos modèles.
@@ -40,7 +57,7 @@ llm-provider/
 
 ### Support GPU (NVIDIA)
 
-Pour activer le support GPU, décommentez la section `deploy` dans [docker-compose.yml](docker-compose.yml):
+Le support GPU NVIDIA est **activé par défaut** dans [docker-compose.yml](docker-compose.yml):
 
 ```yaml
 deploy:

@@ -3,7 +3,9 @@ set -e
 
 # Load UpCloud credentials from root .env
 if [ -f "../../.env" ]; then
-    export $(grep -E '^UPCLOUD_' ../../.env | xargs)
+    set -a
+    source ../../.env
+    set +a
     echo "✓ Loaded UpCloud credentials from .env"
 else
     echo "⚠ Warning: ../../.env not found"

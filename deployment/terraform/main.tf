@@ -9,13 +9,6 @@ terraform {
 
 provider "upcloud" {}
 
-resource "upcloud_storage" "main" {
-  size  = var.storage_size
-  tier  = var.storage_tier
-  title = "${var.hostname} Boot Disk"
-  zone  = var.zone
-}
-
 resource "upcloud_server" "main" {
   hostname = var.hostname
   title    = var.hostname
@@ -23,28 +16,26 @@ resource "upcloud_server" "main" {
   plan     = var.plan
   firewall = true
   metadata = true
-
   user_data = file("${path.module}/../upcloud/cloud-init.yml")
+  
+  template {
+    storage = "Ubuntu Server 24.04 LTS (with NVIDIA drivers & CUDA)"
+    size    = var.storage_size
+  }
 
   network_interface {
     type              = "public"
     ip_address_family = "IPv4"
   }
-
+  
   network_interface {
     type              = "utility"
     ip_address_family = "IPv4"
   }
-
+  
   network_interface {
     type              = "public"
     ip_address_family = "IPv6"
-  }
-
-  storage_devices {
-    address = "virtio"
-    storage = upcloud_storage.main.id
-    type    = "disk"
   }
 
   simple_backup {
@@ -65,7 +56,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-
+  
   firewall_rule {
     action                 = "accept"
     comment                = "Allow Ollama API"
@@ -75,7 +66,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-
+  
   firewall_rule {
     action                 = "accept"
     comment                = "Allow Open WebUI"
@@ -85,7 +76,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-
+  
   firewall_rule {
     action                 = "accept"
     comment                = "Allow HTTP"
@@ -95,7 +86,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-
+  
   firewall_rule {
     action                 = "accept"
     comment                = "Allow HTTPS"

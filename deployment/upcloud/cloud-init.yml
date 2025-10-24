@@ -1,9 +1,7 @@
 #cloud-config
-# UpCloud Cloud-Init Configuration for LLM Provider
-# This script automatically sets up the Ollama LLM provider on server startup
-# GitHub Repository: https://github.com/Sahlulegat/llm-provider
+# UpCloud Cloud-Init - LLM Provider Deployment
+# Repository: https://github.com/Sahlulegat/llm-provider
 
-# Update system and install dependencies
 package_update: true
 package_upgrade: true
 
@@ -16,7 +14,6 @@ packages:
   - python3
   - python3-pip
 
-# Create user for running the application
 users:
   - name: llmadmin
     groups: docker, sudo
@@ -25,7 +22,6 @@ users:
     ssh_authorized_keys:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFNcHP8pgPPbrnD01OzGk82PNgY6guS4rwx0LGG1hggh pmollier@pack-solutions.com
 
-# Configure Docker and NVIDIA Container Toolkit
 runcmd:
   # Install Docker
   - curl -fsSL https://get.docker.com -o get-docker.sh
@@ -48,70 +44,43 @@ runcmd:
   - chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
   - ln -sf /usr/local/lib/docker/cli-plugins/docker-compose /usr/bin/docker-compose
 
-  # Clone the project from GitHub
+  # Clone project from GitHub
   - git clone https://github.com/Sahlulegat/llm-provider.git /opt/llm-provider
   - cd /opt/llm-provider
 
-  # Generate Fernet encryption key for Open WebUI
+  # Generate Fernet key and create .env
   - pip3 install cryptography
   - |
     FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
     cat > /opt/llm-provider/.env << EOF
-    # Ollama Configuration
     OLLAMA_PORT=11434
     OLLAMA_ORIGINS=*
-    # Keep model loaded indefinitely (never unload)
     OLLAMA_KEEP_ALIVE=-1
     OLLAMA_MAX_LOADED_MODELS=1
-    # Increase timeout for large model operations
     OLLAMA_LOAD_TIMEOUT=10m
-
-    # Model Configuration
     MODEL_NAME=gpt-oss:120b
     MODEL_PULL_ON_START=true
-
-    # API Configuration
-    # Increased timeout for 120B model inference
     API_TIMEOUT=600
-
-    # Logging
     LOG_LEVEL=info
-
-    # Resource Configuration (for cloud deployment)
-    # Recommended: 64GB+ RAM, 200GB+ disk space
-
-    # ============================================
-    # Open WebUI Configuration
-    # ============================================
     WEBUI_PORT=3000
-    # Auto-generated Fernet key for encryption
     WEBUI_SECRET_KEY="${FERNET_KEY}"
     WEBUI_NAME="LLM Chat"
-    # Allow user signup (set to false after creating admin account)
     ENABLE_SIGNUP=true
-    # Default role for new users: pending, user, or admin
     DEFAULT_USER_ROLE=pending
-    # Enable authentication (always true for security)
     WEBUI_AUTH=true
-
-    # ============================================
-    # Traefik / HTTPS Configuration (for cloud deployment)
-    # ============================================
-    # Your domain name (e.g., llm.yourdomain.com)
     DOMAIN_NAME=""
-    # Email for Let's Encrypt notifications
     ACME_EMAIL=""
     EOF
 
-  # Set proper permissions
+  # Set permissions
   - chown -R llmadmin:llmadmin /opt/llm-provider
   - chmod 600 /opt/llm-provider/.env
 
-  # Create systemd service for auto-start
+  # Create systemd service
   - |
     cat > /etc/systemd/system/llm-provider.service << 'EOF'
     [Unit]
-    Description=LLM Provider - Ollama and Open WebUI Service
+    Description=LLM Provider - Ollama and Open WebUI
     Requires=docker.service
     After=docker.service network-online.target
     Wants=network-online.target
@@ -126,8 +95,6 @@ runcmd:
     StandardOutput=journal
     StandardError=journal
     TimeoutStartSec=600
-
-    # Resource limits
     LimitNOFILE=65536
     LimitNPROC=4096
 
@@ -135,61 +102,36 @@ runcmd:
     WantedBy=multi-user.target
     EOF
 
-  # Enable and start the service
+  # Enable and start service
   - systemctl daemon-reload
   - systemctl enable llm-provider.service
   - systemctl start llm-provider.service
 
-  # Setup firewall (optional - uncomment if using UFW)
-  # - ufw allow 22/tcp
-  # - ufw allow 11434/tcp
-  # - ufw allow 3000/tcp
-  # - ufw --force enable
-
   # Log completion
   - echo "LLM Provider setup completed at $(date)" >> /var/log/cloud-init-output.log
 
-# Write completion marker
 write_files:
   - path: /etc/llm-provider-initialized
     content: |
       LLM Provider initialized from GitHub
       Repository: https://github.com/Sahlulegat/llm-provider
       Model: gpt-oss:120b
-      GPU Support: NVIDIA L40S with CUDA
+      GPU Support: NVIDIA with CUDA
       Initialized at: $(date)
     owner: root:root
     permissions: '0644'
 
-# Final message
 final_message: |
   ============================================
   LLM Provider Setup Complete!
   ============================================
 
-  GitHub Repository: https://github.com/Sahlulegat/llm-provider
+  GitHub: https://github.com/Sahlulegat/llm-provider
 
-  The Ollama + Open WebUI service is starting up and will:
-  1. Start the Docker containers with GPU support
-  2. Download the gpt-oss:120b model (~65GB)
-  3. Keep the model loaded indefinitely (OLLAMA_KEEP_ALIVE=-1)
-  4. Be available on:
-     - Ollama API: http://localhost:11434
-     - Open WebUI: http://localhost:3000
+  Services starting:
+  - Ollama API: http://localhost:11434
+  - Open WebUI: http://localhost:3000
 
-  Monitor progress:
-    - journalctl -u llm-provider.service -f
-    - docker logs -f ollama-provider
-    - docker logs -f open-webui
-
-  Manage the service:
-    - cd /opt/llm-provider
-    - make status    # Check status
-    - make logs      # View logs
-    - make restart   # Restart services
-    - make stop      # Stop services
-
-  GPU Status:
-    - nvidia-smi
-
+  Monitor: journalctl -u llm-provider.service -f
+  GPU Status: nvidia-smi
   ============================================

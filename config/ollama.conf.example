@@ -1,8 +1,0 @@
-# Ollama Configuration Example
-# This file can be used for additional configuration if needed
-
-# Note: Most configuration is done through environment variables
-# in the .env file or docker-compose.yml
-
-# For advanced configurations, refer to:
-# https://github.com/ollama/ollama/blob/main/docs/faq.md

@@ -1,0 +1,95 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-provider
+    restart: unless-stopped
+
+    # Port mapping - only expose internally for security
+    expose:
+      - "11434"
+
+    # Volume mounts
+    volumes:
+      - ./data/ollama:/root/.ollama
+      - ./config:/config:ro
+      - ./logs:/logs
+
+    # Environment variables
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=${OLLAMA_ORIGINS:-*}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
+
+    # GPU support (uncomment for NVIDIA)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    networks:
+      - llm-network
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+
+    # Port mapping
+    ports:
+      - "${WEBUI_PORT:-3000}:8080"
+
+    # Volume for data persistence
+    volumes:
+      - ./data/open-webui:/app/backend/data
+
+    # Environment variables
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-changeme-generate-a-secure-key}
+      - WEBUI_NAME=${WEBUI_NAME:-LLM Chat}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP:-true}
+      - DEFAULT_USER_ROLE=${DEFAULT_USER_ROLE:-pending}
+      - WEBUI_AUTH=${WEBUI_AUTH:-true}
+
+    # Depends on Ollama
+    depends_on:
+      - ollama
+
+    networks:
+      - llm-network
+
+  # Traefik reverse proxy for HTTPS (optional, for production)
+  # Uncomment this section when deploying to cloud with a domain name
+  # traefik:
+  #   image: traefik:v2.10
+  #   container_name: traefik
+  #   restart: unless-stopped
+  #   command:
+  #     - "--api.insecure=false"
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--entrypoints.websecure.address=:443"
+  #     - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+  #     - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+  #     - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+  #     # Redirect HTTP to HTTPS
+  #     - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+  #     - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - ./data/letsencrypt:/letsencrypt
+  #   networks:
+  #     - llm-network
+
+networks:
+  llm-network:
+    driver: bridge
+    name: llm-provider-network

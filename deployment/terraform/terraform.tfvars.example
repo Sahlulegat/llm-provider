@@ -1,0 +1,10 @@
+# UpCloud LLM Provider Configuration
+# Copy this file to terraform.tfvars and adjust values
+
+hostname     = "llm-provider"
+zone         = "fi-hel2"  # or "de-fra1", "us-nyc1", etc.
+plan         = "GPU-12xCPU-128GB-1xL40S"
+storage_size = 200
+storage_tier = "maxiops"  # or "hdd" for cheaper but slower
+backup_plan  = "daily"    # or "weekly", "none"
+backup_time  = "0200"     # HHMM format

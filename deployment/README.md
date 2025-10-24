@@ -1,125 +1,129 @@
 # Déploiement UpCloud
 
-Guide pour déployer LLM Provider sur UpCloud avec cloud-init.
+Deux méthodes pour déployer LLM Provider sur UpCloud.
 
-## Prérequis
+## Méthode 1 : Terraform (Recommandé)
 
-- Compte UpCloud actif
-- Clé SSH publique
+Infrastructure as Code - reproductible et automatisé.
 
-## Déploiement
-
-### 1. Créer un serveur
-
-Dans [UpCloud Control Panel](https://hub.upcloud.com/):
-
-- Zone: `de-fra1` (ou autre)
-- Plan: **16xCPU-64GB** minimum (pour gpt-oss:120b)
-- OS: Ubuntu 24.04 LTS
-- Storage: 250GB MaxIOPS
-- Hostname: `llm-provider`
-
-### 2. Configurer Cloud-Init
-
-Dans la section "User data", copiez le contenu de [`upcloud/cloud-init.yml`](upcloud/cloud-init.yml).
-
-**Important**: Mettez à jour votre clé SSH dans le fichier cloud-init.yml.
-
-### 3. Déployer
-
-Cliquez sur "Deploy". Le serveur va automatiquement:
-- Installer Docker + NVIDIA Container Toolkit
-- Cloner le repo GitHub
-- Générer les clés de chiffrement
-- Démarrer les services
-- Télécharger le modèle (~65GB)
-
-### 4. Monitoring
+### Quick Start
 
 ```bash
-# Connexion SSH
-ssh root@<IP_ADDRESS>
+cd deployment/terraform
 
-# Surveiller cloud-init
-tail -f /var/log/cloud-init-output.log
+# Exporter les credentials UpCloud
+export UPCLOUD_USERNAME="your-api-username"
+export UPCLOUD_PASSWORD="your-api-password"
 
-# Vérifier le service
-systemctl status llm-provider.service
+# Configurer
+cp terraform.tfvars.example terraform.tfvars
+nano terraform.tfvars
 
-# Logs Docker
-docker logs -f ollama-provider
-docker logs -f open-webui
-
-# Tester l'API
-curl http://localhost:11434/api/tags
+# Déployer
+terraform init
+terraform plan
+terraform apply
 ```
 
-## Tailles de serveur recommandées
+Voir [terraform/README.md](terraform/README.md) pour le guide complet.
 
-| Plan | vCPU | RAM | Usage |
-|------|------|-----|-------|
-| 8xCPU-32GB | 8 | 32GB | Test/Dev |
-| **16xCPU-64GB** | 16 | 64GB | **Production** |
-| 20xCPU-96GB | 20 | 96GB | Haute performance |
+### Avantages
 
-**Recommandation**: 16xCPU-64GB + 250GB storage
+- Infrastructure versionnée dans Git
+- Déploiement reproductible
+- Firewall configuré automatiquement
+- Outputs avec URLs et commandes
 
-## Sécurité
+## Méthode 2 : Cloud-Init Manuel
 
-Configuration du firewall UpCloud:
-- Port 22: SSH
-- Port 11434: Ollama API
-- Port 3000: Open WebUI
-- Ports 80/443: HTTP/HTTPS (optionnel)
+Configuration via l'interface web UpCloud.
 
-Best practices:
-- Restreindre SSH à vos IPs
-- Utiliser un reverse proxy avec HTTPS en production
-- Activer les backups automatiques
-- Monitorer l'utilisation des ressources
+### Étapes
+
+1. **Créer un serveur** dans [UpCloud Control Panel](https://hub.upcloud.com/)
+
+   - Zone: `fi-hel2` (Helsinki) ou autre
+   - Plan: **GPU-12xCPU-128GB-1xL40S** (ou 16xCPU-64GB minimum)
+   - OS: Ubuntu 24.04 LTS
+   - Storage: 200GB MaxIOPS
+
+2. **User Data**: Copiez [`upcloud/cloud-init.yml`](upcloud/cloud-init.yml)
+
+   **Important**: Mettez à jour votre clé SSH dans le fichier
+
+3. **Deploy** et attendez (~10-15 minutes)
+
+### Monitoring
+
+```bash
+ssh root@<IP>
+tail -f /var/log/cloud-init-output.log
+```
+
+## Plans recommandés
+
+| Plan | vCPU | RAM | VRAM | Prix/mois* |
+|------|------|-----|------|-----------|
+| GPU-12xCPU-128GB-1xL40S | 12 | 128GB | 48GB L40S | ~€450 |
+| 16xCPU-64GB | 16 | 64GB | - | ~€320 |
+| 8xCPU-32GB | 8 | 32GB | - | ~€160 |
+
+*Prix approximatifs
+
+## Ce qui est déployé
+
+- Docker + NVIDIA Container Toolkit
+- Ollama avec GPU support
+- Open WebUI
+- Systemd service (auto-start au boot)
+- Model gpt-oss:120b (~65GB)
+- Backups quotidiens
+
+## Accès
+
+Après déploiement :
+- SSH: `ssh root@<IP>`
+- Ollama API: `http://<IP>:11434`
+- Open WebUI: `http://<IP>:3000`
 
 ## Troubleshooting
 
 ```bash
-# Service ne démarre pas
-journalctl -u llm-provider.service -n 100
-systemctl restart llm-provider.service
+# Service status
+systemctl status llm-provider.service
 
-# Modèle ne se télécharge pas
-docker exec ollama-provider ollama pull gpt-oss:120b
+# Logs
+journalctl -u llm-provider.service -f
+docker logs -f ollama-provider
 
-# Vérifier espace disque
-df -h
-
-# GPU status
+# GPU
 nvidia-smi
+
+# Espace disque
+df -h
 ```
+
+## Sécurité
+
+- Firewall activé (avec Terraform)
+- SSH, Ollama API (11434), WebUI (3000), HTTP/HTTPS
+- Restreindre les IPs dans le firewall UpCloud
+- Utiliser un reverse proxy HTTPS en production
 
 ## Backup
 
 ```bash
-# Backup des données
+# Backup
 ssh root@<IP> 'tar -czf backup.tar.gz /opt/llm-provider/data/'
-
-# Télécharger
 scp root@<IP>:~/backup.tar.gz ./
 
-# Restaurer sur nouveau serveur
+# Restore
 scp backup.tar.gz root@<NEW_IP>:~
 ssh root@<NEW_IP> 'cd /opt/llm-provider && tar -xzf ~/backup.tar.gz'
 ```
 
-## Coûts estimés
-
-Pour 16xCPU-64GB + 250GB MaxIOPS:
-- ~$380/mois
-
-Optimisations:
-- Arrêter le serveur quand inutilisé
-- Utiliser HDD au lieu de MaxIOPS (plus lent)
-
 ## Ressources
 
-- [Documentation UpCloud](https://upcloud.com/docs/)
+- [Terraform Guide](terraform/README.md)
+- [UpCloud Docs](https://upcloud.com/docs/)
 - [Ollama Docs](https://github.com/ollama/ollama/blob/main/docs/api.md)
-- [Open WebUI](https://github.com/open-webui/open-webui)

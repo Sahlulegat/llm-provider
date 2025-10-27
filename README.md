@@ -15,14 +15,14 @@ cp .env.example .env
 make start
 ```
 
-Accédez à l'interface web : **http://localhost:3000**
+Accédez à l'interface web : **http://localhost:3000** (local) ou **https://votre-domaine.com** (production)
 
 ## Architecture
 
 ```
 llm-provider/
-├── docker-compose.yml
-├── docker-compose.prod.yml  # Production avec Traefik
+├── docker-compose.yml        # Stack avec Caddy pour HTTPS
+├── Caddyfile                 # Configuration reverse proxy
 ├── .env                      # Variables (ne pas commiter)
 ├── .env.example
 ├── Makefile
@@ -81,6 +81,37 @@ Variables principales dans `.env`:
 - `MODEL_NAME=gpt-oss:120b` : Modèle à utiliser
 - `WEBUI_SECRET_KEY` : Clé de chiffrement Fernet (obligatoire)
 
+### Configuration Production (HTTPS)
+
+Pour exposer sur le web avec HTTPS automatique, configurez simplement votre domaine :
+
+1. **Configurez `.env`** :
+   ```bash
+   DOMAIN_NAME="chat.votre-domaine.com"
+   ACME_EMAIL="votre@email.com"
+   ```
+
+2. **Configurez DNS** - Pointez vers l'IP du serveur :
+   - `chat.votre-domaine.com` → IP serveur (interface)
+   - `api.chat.votre-domaine.com` → IP serveur (API)
+
+3. **Lancez** :
+   ```bash
+   make start
+   ```
+
+**C'est tout !** Caddy détecte automatiquement le domaine et active HTTPS :
+- ✅ Certificats SSL Let's Encrypt automatiques
+- ✅ Renouvellement automatique
+- ✅ Redirection HTTP → HTTPS
+- ✅ Headers de sécurité
+
+**Sécurité** :
+- Activez le firewall (ports 22, 80, 443 uniquement)
+- Désactivez l'inscription après création admin : `ENABLE_SIGNUP=false`
+- `WEBUI_SECRET_KEY` généré automatiquement en production
+- Restreignez l'accès API si nécessaire (firewall, IP whitelist)
+
 ## Déploiement UpCloud
 
 Le fichier `deployment/upcloud/cloud-init.yml` déploie automatiquement tout :
@@ -106,6 +137,9 @@ nvidia-smi             # GPU status
 
 ## Docs
 
+- **[Guide de déploiement](DEPLOYMENT.md)** - Comment votre .env local est copié vers le cloud
+- **[Guide HTTPS/Production](HTTPS.md)** - Configuration détaillée pour exposer sur le web
+- [Déploiement UpCloud](deployment/README.md) - Options Terraform et Cloud-Init
 - [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
 - [Open WebUI](https://github.com/open-webui/open-webui)
 - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)

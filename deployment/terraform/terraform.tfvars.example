@@ -1,6 +1,10 @@
 # UpCloud LLM Provider Configuration
 # Copy this file to terraform.tfvars and adjust values
 
+# ============================================
+# Infrastructure Configuration
+# ============================================
+
 hostname     = "llm-provider"
 zone         = "fi-hel2"  # or "de-fra1", "us-nyc1", etc.
 plan         = "GPU-12xCPU-128GB-1xL40S"
@@ -8,3 +12,33 @@ storage_size = 200
 storage_tier = "maxiops"  # or "hdd" for cheaper but slower
 backup_plan  = "daily"    # or "weekly", "none"
 backup_time  = "0200"     # HHMM format
+
+# ============================================
+# Application Configuration (.env variables)
+# ============================================
+
+# Ollama
+ollama_port              = 11434
+ollama_origins           = "*"
+ollama_keep_alive        = "-1"  # -1 for indefinitely, or "30m"
+ollama_max_loaded_models = 1
+ollama_load_timeout      = "10m"
+
+# Model
+model_name          = "gpt-oss:120b"
+model_pull_on_start = true
+
+# API
+api_timeout = 600
+log_level   = "info"
+
+# Open WebUI
+webui_port          = 3000
+webui_name          = "LLM Chat"
+enable_signup       = true   # Set to false after creating admin
+default_user_role   = "pending"
+webui_auth          = true
+
+# HTTPS (leave empty for localhost access)
+domain_name = ""  # e.g., "chat.example.com"
+acme_email  = ""  # e.g., "admin@example.com"

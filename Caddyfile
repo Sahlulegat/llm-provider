@@ -1,0 +1,84 @@
+# Caddyfile - Configuration reverse proxy pour LLM Provider
+# S'adapte automatiquement : HTTPS si domaine configuré, sinon inactif
+
+{
+	# Email pour Let's Encrypt
+	email {$ACME_EMAIL}
+}
+
+# Open WebUI - Interface principale
+{$DOMAIN_NAME:localhost} {
+	# Activer la compression
+	encode gzip zstd
+
+	# Logs globaux pour ce site
+	log {
+		output file /data/access.log
+		format json
+	}
+
+	# Si localhost, message informatif
+	@localhost {
+		host localhost
+	}
+
+	# Pour les vrais domaines
+	@domain {
+		not host localhost
+	}
+
+	handle @domain {
+		reverse_proxy open-webui:8080
+
+		# Headers de sécurité
+		header {
+			-Server
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "SAMEORIGIN"
+			X-XSS-Protection "1; mode=block"
+			Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		}
+	}
+
+	handle @localhost {
+		respond "Accès local : http://localhost:3000 (WebUI) et http://localhost:11434 (API)" 200
+	}
+}
+
+# API Ollama - Sous-domaine séparé
+api.{$DOMAIN_NAME:localhost} {
+	# Activer la compression
+	encode gzip zstd
+
+	# Logs globaux pour l'API
+	log {
+		output file /data/api-access.log
+		format json
+	}
+
+	@domain {
+		not host api.localhost
+		not host localhost
+	}
+
+	handle @domain {
+		reverse_proxy ollama:11434 {
+			# Timeouts augmentés pour inférences longues (120B model)
+			transport http {
+				dial_timeout 30s
+				read_timeout 600s
+				write_timeout 600s
+			}
+		}
+
+		# Headers de sécurité
+		header {
+			-Server
+			X-Content-Type-Options "nosniff"
+		}
+	}
+
+	handle {
+		respond "Accès API local : http://localhost:11434" 200
+	}
+}

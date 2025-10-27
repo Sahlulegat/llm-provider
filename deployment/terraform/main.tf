@@ -16,8 +16,27 @@ resource "upcloud_server" "main" {
   plan     = var.plan
   firewall = true
   metadata = true
-  user_data = file("${path.module}/../upcloud/cloud-init.yml")
-  
+
+  # Pass all variables to cloud-init template
+  user_data = templatefile("${path.module}/../upcloud/cloud-init.yml", {
+    # Application variables for .env file
+    ollama_port              = var.ollama_port
+    ollama_origins           = var.ollama_origins
+    ollama_keep_alive        = var.ollama_keep_alive
+    ollama_max_loaded_models = var.ollama_max_loaded_models
+    ollama_load_timeout      = var.ollama_load_timeout
+    model_name               = var.model_name
+    model_pull_on_start      = var.model_pull_on_start
+    api_timeout              = var.api_timeout
+    log_level                = var.log_level
+    webui_port               = var.webui_port
+    webui_name               = var.webui_name
+    enable_signup            = var.enable_signup
+    default_user_role        = var.default_user_role
+    webui_auth               = var.webui_auth
+    domain_name              = var.domain_name
+    acme_email               = var.acme_email
+  })
   template {
     storage = "Ubuntu Server 24.04 LTS (with NVIDIA drivers & CUDA)"
     size    = var.storage_size
@@ -27,12 +46,12 @@ resource "upcloud_server" "main" {
     type              = "public"
     ip_address_family = "IPv4"
   }
-  
+
   network_interface {
     type              = "utility"
     ip_address_family = "IPv4"
   }
-  
+
   network_interface {
     type              = "public"
     ip_address_family = "IPv6"
@@ -56,7 +75,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-  
+
   firewall_rule {
     action                 = "accept"
     comment                = "Allow Ollama API"
@@ -66,7 +85,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-  
+
   firewall_rule {
     action                 = "accept"
     comment                = "Allow Open WebUI"
@@ -76,7 +95,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-  
+
   firewall_rule {
     action                 = "accept"
     comment                = "Allow HTTP"
@@ -86,7 +105,7 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "tcp"
   }
-  
+
   firewall_rule {
     action                 = "accept"
     comment                = "Allow HTTPS"

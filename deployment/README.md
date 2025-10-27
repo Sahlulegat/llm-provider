@@ -49,9 +49,14 @@ Configuration via l'interface web UpCloud.
 
 2. **User Data**: Copiez [`upcloud/cloud-init.yml`](upcloud/cloud-init.yml)
 
-   **Important**: Mettez à jour votre clé SSH dans le fichier
+   **Important**:
+   - Mettez à jour votre clé SSH dans le fichier
+   - Ajoutez vos variables d'environnement manuellement (DOMAIN_NAME, ACME_EMAIL, etc.)
+   - Cette méthode nécessite plus de configuration manuelle
 
 3. **Deploy** et attendez (~10-15 minutes)
+
+**Note**: Pour un déploiement automatisé avec votre `.env` local, utilisez la **Méthode 1 (Terraform)** qui injecte automatiquement votre configuration.
 
 ### Monitoring
 
@@ -75,6 +80,7 @@ tail -f /var/log/cloud-init-output.log
 - Docker + NVIDIA Container Toolkit
 - Ollama avec GPU support
 - Open WebUI
+- Caddy (reverse proxy HTTPS automatique)
 - Systemd service (auto-start au boot)
 - Model gpt-oss:120b (~65GB)
 - Backups quotidiens
@@ -83,8 +89,15 @@ tail -f /var/log/cloud-init-output.log
 
 Après déploiement :
 - SSH: `ssh root@<IP>`
-- Ollama API: `http://<IP>:11434`
-- Open WebUI: `http://<IP>:3000`
+- Ollama API: `http://<IP>:11434` (ou `https://api.votre-domaine.com` si configuré)
+- Open WebUI: `http://<IP>:3000` (ou `https://votre-domaine.com` si configuré)
+
+Pour activer HTTPS avec domaine, configurez `DOMAIN_NAME` et `ACME_EMAIL` dans `.env` puis relancez :
+```bash
+make restart
+```
+
+Caddy détecte automatiquement le domaine et active HTTPS.
 
 ## Troubleshooting
 
@@ -105,10 +118,10 @@ df -h
 
 ## Sécurité
 
-- Firewall activé (avec Terraform)
-- SSH, Ollama API (11434), WebUI (3000), HTTP/HTTPS
-- Restreindre les IPs dans le firewall UpCloud
-- Utiliser un reverse proxy HTTPS en production
+- Firewall activé (avec Terraform) : SSH (22), HTTP (80), HTTPS (443)
+- Caddy gère automatiquement les certificats SSL Let's Encrypt
+- Désactiver `ENABLE_SIGNUP=false` après création du premier compte admin
+- Restreindre les IPs dans le firewall UpCloud pour limiter l'accès
 
 ## Backup
 

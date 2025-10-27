@@ -3,14 +3,16 @@
 help:
 	@echo "LLM Provider - Available Commands"
 	@echo "=================================="
-	@echo "  make start        - Start the Ollama service"
-	@echo "  make stop         - Stop the Ollama service"
-	@echo "  make restart      - Restart the Ollama service"
+	@echo "  make start        - Start all services (Ollama + WebUI + Caddy)"
+	@echo "  make stop         - Stop all services"
+	@echo "  make restart      - Restart all services"
 	@echo "  make status       - Check service status"
 	@echo "  make logs         - View service logs"
 	@echo "  make test         - Test the model"
 	@echo "  make pull-model   - Pull the configured model"
 	@echo "  make clean        - Remove all containers and volumes (WARNING: deletes data)"
+	@echo ""
+	@echo "Caddy reverse proxy s'active automatiquement si DOMAIN_NAME est configuré"
 	@echo ""
 
 start:

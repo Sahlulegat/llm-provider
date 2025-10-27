@@ -53,23 +53,23 @@ runcmd:
   - |
     FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
     cat > /opt/llm-provider/.env << EOF
-    OLLAMA_PORT=11434
-    OLLAMA_ORIGINS=*
-    OLLAMA_KEEP_ALIVE=-1
-    OLLAMA_MAX_LOADED_MODELS=1
-    OLLAMA_LOAD_TIMEOUT=10m
-    MODEL_NAME=gpt-oss:120b
-    MODEL_PULL_ON_START=true
-    API_TIMEOUT=600
-    LOG_LEVEL=info
-    WEBUI_PORT=3000
-    WEBUI_SECRET_KEY="${FERNET_KEY}"
-    WEBUI_NAME="LLM Chat"
-    ENABLE_SIGNUP=true
-    DEFAULT_USER_ROLE=pending
-    WEBUI_AUTH=true
-    DOMAIN_NAME=""
-    ACME_EMAIL=""
+    OLLAMA_PORT=${ollama_port}
+    OLLAMA_ORIGINS=${ollama_origins}
+    OLLAMA_KEEP_ALIVE=${ollama_keep_alive}
+    OLLAMA_MAX_LOADED_MODELS=${ollama_max_loaded_models}
+    OLLAMA_LOAD_TIMEOUT=${ollama_load_timeout}
+    MODEL_NAME=${model_name}
+    MODEL_PULL_ON_START=${model_pull_on_start}
+    API_TIMEOUT=${api_timeout}
+    LOG_LEVEL=${log_level}
+    WEBUI_PORT=${webui_port}
+    WEBUI_SECRET_KEY="$FERNET_KEY"
+    WEBUI_NAME="${webui_name}"
+    ENABLE_SIGNUP=${enable_signup}
+    DEFAULT_USER_ROLE=${default_user_role}
+    WEBUI_AUTH=${webui_auth}
+    DOMAIN_NAME=${domain_name}
+    ACME_EMAIL=${acme_email}
     EOF
 
   # Set permissions
@@ -110,8 +110,8 @@ runcmd:
   # Wait for Ollama to be ready and auto-pull model
   - echo "Waiting for Ollama to be ready..." >> /var/log/cloud-init-output.log
   - sleep 60
-  - docker exec ollama-provider ollama pull gpt-oss:120b
-  - echo "Model gpt-oss:120b pulled successfully at $(date)" >> /var/log/cloud-init-output.log
+  - docker exec ollama-provider ollama pull ${model_name}
+  - echo "Model ${model_name} pulled successfully at $(date)" >> /var/log/cloud-init-output.log
 
   # Log completion
   - echo "LLM Provider setup completed at $(date)" >> /var/log/cloud-init-output.log
@@ -121,9 +121,8 @@ write_files:
     content: |
       LLM Provider initialized from GitHub
       Repository: https://github.com/Sahlulegat/llm-provider
-      Model: gpt-oss:120b
+      Model: ${model_name}
       GPU Support: NVIDIA with CUDA
-      Initialized at: $(date)
     owner: root:root
     permissions: '0644'
 
@@ -135,8 +134,8 @@ final_message: |
   GitHub: https://github.com/Sahlulegat/llm-provider
 
   Services starting:
-  - Ollama API: http://localhost:11434
-  - Open WebUI: http://localhost:3000
+  - Ollama API: http://localhost:${ollama_port}
+  - Open WebUI: http://localhost:${webui_port}
 
   Monitor: journalctl -u llm-provider.service -f
   GPU Status: nvidia-smi

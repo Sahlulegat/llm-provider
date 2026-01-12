@@ -36,16 +36,12 @@ services:
       - ENABLE_SIGNUP=${ENABLE_SIGNUP:-true}
       - DEFAULT_USER_ROLE=${DEFAULT_USER_ROLE:-pending}
       - WEBUI_AUTH=${WEBUI_AUTH:-true}
-      # On ajoute l'API PaddleOCR comme une connexion OpenAI supplémentaire
-      - OPENAI_API_BASE_URL=http://paddleocr-vl-api:8080/v1
-      - OPENAI_API_KEY=empty
     depends_on:
       - ollama
     networks:
       - llm-network
 
-  # --- CONFIGURATION PADDLEOCR-VL (OFFICIELLE) ---
-
+  # --- CONFIGURATION PADDLEOCR-VL ---
   paddleocr-vl-api:
     image: ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-vl:latest
     container_name: paddleocr-vl-api
@@ -54,12 +50,18 @@ services:
     profiles : ["paddle"]
     ports:
       - "8080:8080"
+    volumes:
+      - ./pipeline_config.yaml:/opt/pipeline_config.yaml:ro
     environment:
-      - VLM_BACKEND=vllm
-      # On pointe vers le service de calcul ci-dessous
-      - VLM_SERVER_HOST=paddleocr-vlm-server
-      - VLM_SERVER_PORT=8000
-    command: /bin/bash -c "paddlex --serve --pipeline /home/paddleocr/pipeline_config_vllm.yaml"
+      - VLM_BACKEND=vllm-server
+    command: /bin/bash -c "paddlex --serve --pipeline /opt/pipeline_config.yaml"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
       paddleocr-vlm-server:
         condition: service_healthy
@@ -73,12 +75,11 @@ services:
     restart: unless-stopped
     profiles : ["paddle"]
     command: >
-      paddleocr genai_server 
-      --model_name PaddleOCR-VL-0.9B 
-      --host 0.0.0.0 
-      --port 8000 
-      --backend vllm 
-      --backend_config "{'gpu_memory_utilization': 0.3}"
+      paddleocr genai_server
+      --model_name PaddleOCR-VL-0.9B
+      --host 0.0.0.0
+      --port 8000
+      --backend vllm
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 15s

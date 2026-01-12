@@ -11,8 +11,6 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=${OLLAMA_ORIGINS:-*}
-      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
-      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
     deploy:
       resources:
         reservations:
@@ -38,40 +36,42 @@ services:
       - ENABLE_SIGNUP=${ENABLE_SIGNUP:-true}
       - DEFAULT_USER_ROLE=${DEFAULT_USER_ROLE:-pending}
       - WEBUI_AUTH=${WEBUI_AUTH:-true}
+      # On ajoute l'API PaddleOCR comme une connexion OpenAI supplémentaire
+      - OPENAI_API_BASE_URL=http://paddleocr-vl-api:8080/v1
+      - OPENAI_API_KEY=empty
     depends_on:
       - ollama
     networks:
       - llm-network
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: caddy-proxy
+  # --- CONFIGURATION PADDLEOCR-VL (OFFICIELLE) ---
+
+  paddleocr-vl-api:
+    image: ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-vl:latest
+    container_name: paddleocr-vl-api
+    user: root
     restart: unless-stopped
+    profile : ["paddle"]
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./data/caddy/data:/data
-      - ./data/caddy/config:/config
+      - "8080:8080"
     environment:
-      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
-      - ACME_EMAIL=${ACME_EMAIL:-}
+      - VLM_BACKEND=vllm
+      # On pointe vers le service de calcul ci-dessous
+      - VLM_SERVER_HOST=paddleocr-vlm-server
+      - VLM_SERVER_PORT=8000
+    command: /bin/bash -c "paddlex --serve --pipeline /home/paddleocr/pipeline_config_vllm.yaml"
+    depends_on:
+      paddleocr-vlm-server:
+        condition: service_healthy
     networks:
       - llm-network
-    depends_on:
-      - ollama
-      - open-webui
 
-  paddleocr-vl:
+  paddleocr-vlm-server:
     image: ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-genai-vllm-server:latest
-    container_name: paddleocr-vl-server
+    container_name: paddleocr-vlm-server
+    user: root
     restart: unless-stopped
-    ports:
-      - "8080:8000"
-    environment:
-      - TZ=Europe/Paris
+    profile : ["paddle"]
     command: >
       paddleocr genai_server 
       --model_name PaddleOCR-VL-0.9B 
@@ -79,6 +79,12 @@ services:
       --port 8000 
       --backend vllm 
       --backend_config "{'gpu_memory_utilization': 0.3}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     deploy:
       resources:
         reservations:
@@ -88,6 +94,22 @@ services:
               capabilities: [gpu]
     networks:
       - llm-network
+
+  # -----------------------------------------------
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - llm-network
+    depends_on:
+      - open-webui
 
 networks:
   llm-network:

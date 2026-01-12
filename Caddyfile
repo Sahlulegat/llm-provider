@@ -82,3 +82,41 @@ api.{$DOMAIN_NAME:localhost} {
 		respond "Accès API local : http://localhost:11434" 200
 	}
 }
+
+# API OCR - PaddleOCR-VL
+ocr.{$DOMAIN_NAME:localhost} {
+    # Activer la compression
+    encode gzip zstd
+
+    # Logs globaux pour l'API OCR
+    log {
+        output file /data/ocr-access.log
+        format json
+    }
+
+    @domain {
+        not host ocr.localhost
+        not host localhost
+    }
+
+    handle @domain {
+        reverse_proxy paddleocr-vl-api:8080 {
+            # Timeouts augmentés pour parsing de gros PDFs
+            transport http {
+                dial_timeout 30s
+                read_timeout 300s
+                write_timeout 300s
+            }
+        }
+
+        # Headers de sécurité
+        header {
+            -Server
+            X-Content-Type-Options "nosniff"
+        }
+    }
+
+    handle {
+        respond "Accès API OCR local : http://localhost:8080" 200
+    }
+}

@@ -51,7 +51,7 @@ services:
     container_name: paddleocr-vl-api
     user: root
     restart: unless-stopped
-    profile : ["paddle"]
+    profiles : ["paddle"]
     ports:
       - "8080:8080"
     environment:
@@ -71,7 +71,7 @@ services:
     container_name: paddleocr-vlm-server
     user: root
     restart: unless-stopped
-    profile : ["paddle"]
+    profiles : ["paddle"]
     command: >
       paddleocr genai_server 
       --model_name PaddleOCR-VL-0.9B 

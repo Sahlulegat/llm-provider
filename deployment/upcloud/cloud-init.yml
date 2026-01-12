@@ -3,7 +3,7 @@
 # Repository: https://github.com/Sahlulegat/llm-provider
 
 package_update: true
-package_upgrade: true
+package_upgrade: false # Prevents nvidia drivers from upgrading
 
 packages:
   - curl
@@ -23,6 +23,9 @@ users:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFNcHP8pgPPbrnD01OzGk82PNgY6guS4rwx0LGG1hggh pmollier@pack-solutions.com
 
 runcmd:
+  # upgrade packages except nvidia drivers (doesnt work otherwise)
+  - apt-mark hold "nvidia*" "libnvidia*"
+  - apt-get upgrade -y
   # Install Docker
   - curl -fsSL https://get.docker.com -o get-docker.sh
   - sh get-docker.sh

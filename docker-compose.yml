@@ -110,6 +110,9 @@ services:
       - llm-network
     depends_on:
       - open-webui
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+      - ACME_EMAIL=${ACME_EMAIL:-}
 
 networks:
   llm-network:

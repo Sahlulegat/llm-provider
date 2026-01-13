@@ -8,9 +8,9 @@ variable "hostname" {
   default     = "llm-provider"
 }
 
-variable "ssh_public_key" {
-  description = "SSH public key for server access"
-  type        = string
+variable "ssh_public_keys" {
+  description = "List of SSH public keys for server access"
+  type        = list(string)
   sensitive   = true
 }
 

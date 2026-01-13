@@ -17,10 +17,15 @@ resource "upcloud_server" "main" {
   firewall = true
   metadata = true
 
+  # Configure llmadmin user with SSH keys
+  login {
+    user            = "llmadmin"
+    keys            = var.ssh_public_keys
+    create_password = false
+  }
+
   # Pass all variables to cloud-init template
   user_data = templatefile("${path.module}/../upcloud/cloud-init.yml", {
-    # Infrastructure variables
-    ssh_public_key           = var.ssh_public_key
     # Application variables for .env file
     ollama_port              = var.ollama_port
     ollama_origins           = var.ollama_origins

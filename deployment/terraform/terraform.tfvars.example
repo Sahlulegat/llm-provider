@@ -5,9 +5,11 @@
 # Infrastructure Configuration
 # ============================================
 
-# Note: ssh_public_key is loaded from .env via TF_VAR_ssh_public_key
-# Add this to your .env file:
-#   TF_VAR_ssh_public_key="ssh-ed25519 AAAA... user@example.com"
+# Note: ssh_public_keys is loaded from .env via TF_VAR_ssh_public_keys
+# Add this to your .env file (JSON array format):
+#   TF_VAR_ssh_public_keys='["ssh-ed25519 AAAA... user@example.com"]'
+# For multiple keys:
+#   TF_VAR_ssh_public_keys='["key1", "key2"]'
 
 hostname     = "llm-provider"
 zone         = "fi-hel2"  # or "de-fra1", "us-nyc1", etc.

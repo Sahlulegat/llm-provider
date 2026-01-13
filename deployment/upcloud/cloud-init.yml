@@ -14,16 +14,14 @@ packages:
   - python3
   - python3-pip
 
-users:
-  - name: llmadmin
-    groups: docker, sudo
-    shell: /bin/bash
-    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-    ssh_authorized_keys:
-      - ${ssh_public_key}
-
 runcmd:
-  # upgrade packages except nvidia drivers (doesnt work otherwise)
+  # Configure llmadmin user (created by UpCloud login block)
+  # Add to docker and sudo groups
+  - usermod -aG sudo llmadmin || true
+  - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
+  - chmod 440 /etc/sudoers.d/llmadmin
+
+  # Upgrade packages except nvidia drivers (doesnt work otherwise)
   - apt-mark hold "nvidia*" "libnvidia*"
   - apt-get upgrade -y
   # Install Docker
@@ -32,6 +30,9 @@ runcmd:
   - systemctl enable docker
   - systemctl start docker
   - rm get-docker.sh
+
+  # Add llmadmin to docker group (now that docker is installed)
+  - usermod -aG docker llmadmin
 
   # Install NVIDIA Container Toolkit
   - curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg

@@ -20,7 +20,7 @@ output "ipv6_address" {
 
 output "ssh_command" {
   description = "SSH connection command"
-  value       = "ssh root@${upcloud_server.main.network_interface[0].ip_address}"
+  value       = "ssh llmadmin@${upcloud_server.main.network_interface[0].ip_address}"
 }
 
 output "ollama_api_url" {
@@ -35,5 +35,5 @@ output "webui_url" {
 
 output "monitor_command" {
   description = "Command to monitor cloud-init progress"
-  value       = "ssh root@${upcloud_server.main.network_interface[0].ip_address} 'tail -f /var/log/cloud-init-output.log'"
+  value       = "ssh llmadmin@${upcloud_server.main.network_interface[0].ip_address} 'tail -f /var/log/cloud-init-output.log'"
 }

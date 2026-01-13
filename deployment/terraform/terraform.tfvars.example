@@ -5,12 +5,6 @@
 # Infrastructure Configuration
 # ============================================
 
-# Note: ssh_public_keys is loaded from .env via TF_VAR_ssh_public_keys
-# Add this to your .env file (JSON array format):
-#   TF_VAR_ssh_public_keys='["ssh-ed25519 AAAA... user@example.com"]'
-# For multiple keys:
-#   TF_VAR_ssh_public_keys='["key1", "key2"]'
-
 hostname     = "llm-provider"
 zone         = "fi-hel2"  # or "de-fra1", "us-nyc1", etc.
 plan         = "GPU-12xCPU-128GB-1xL40S"
@@ -21,6 +15,8 @@ backup_time  = "0200"     # HHMM format
 
 # ============================================
 # Application Configuration (.env variables)
+# These variables can be manages through the .env (see .env.tf.example)
+# In this case the block below should be deleted when creating tfvars file
 # ============================================
 
 # Ollama

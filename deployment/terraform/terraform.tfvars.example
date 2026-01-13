@@ -5,6 +5,10 @@
 # Infrastructure Configuration
 # ============================================
 
+# Note: ssh_public_key is loaded from .env via TF_VAR_ssh_public_key
+# Add this to your .env file:
+#   TF_VAR_ssh_public_key="ssh-ed25519 AAAA... user@example.com"
+
 hostname     = "llm-provider"
 zone         = "fi-hel2"  # or "de-fra1", "us-nyc1", etc.
 plan         = "GPU-12xCPU-128GB-1xL40S"

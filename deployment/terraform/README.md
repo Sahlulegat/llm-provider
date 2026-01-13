@@ -2,17 +2,15 @@
 
 Déploiement automatisé sur UpCloud avec Terraform.
 
-**✨ Nouveau** : Terraform copie automatiquement votre fichier `.env` local vers le serveur cloud lors du déploiement. Plus besoin de configuration manuelle !
-
 ## Prérequis
 
 - [Terraform](https://www.terraform.io/downloads) >= 1.0
 - Credentials API UpCloud
-- **Fichier `.env` configuré** à la racine du projet (voir étape 0)
+- **Fichier `.env` configuré** à la racine du projet
 
 ## Configuration
 
-### 0. Configurer votre .env local (IMPORTANT)
+### 0. Configurer votre .env local
 
 **Terraform va copier votre `.env` local** vers le serveur cloud automatiquement.
 

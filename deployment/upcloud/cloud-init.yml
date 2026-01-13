@@ -20,7 +20,7 @@ users:
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFNcHP8pgPPbrnD01OzGk82PNgY6guS4rwx0LGG1hggh pmollier@pack-solutions.com
+      - ${ssh_public_key}
 
 runcmd:
   # upgrade packages except nvidia drivers (doesnt work otherwise)

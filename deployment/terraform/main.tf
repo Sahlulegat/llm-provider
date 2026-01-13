@@ -19,6 +19,8 @@ resource "upcloud_server" "main" {
 
   # Pass all variables to cloud-init template
   user_data = templatefile("${path.module}/../upcloud/cloud-init.yml", {
+    # Infrastructure variables
+    ssh_public_key           = var.ssh_public_key
     # Application variables for .env file
     ollama_port              = var.ollama_port
     ollama_origins           = var.ollama_origins

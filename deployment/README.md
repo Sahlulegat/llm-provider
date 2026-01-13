@@ -47,33 +47,46 @@ Configuration via l'interface web UpCloud.
    - OS: Ubuntu 24.04 LTS
    - Storage: 200GB MaxIOPS
 
-2. **User Data**: Copiez [`upcloud/cloud-init.yml`](upcloud/cloud-init.yml)
+2. **User Data**: dans [`upcloud/cloud-init.yml`](upcloud/cloud-init.yml)
 
-   **Important**:
    - Mettez à jour votre clé SSH dans le fichier
-   - Ajoutez vos variables d'environnement manuellement (DOMAIN_NAME, ACME_EMAIL, etc.)
-   - Cette méthode nécessite plus de configuration manuelle
+   - Les nouvelles variables d'environnement doivent également être ajoutées dans ce fichier dans le bloc correspondant, ainsi que dans les fichiers **variables.tf** et **main.tf**
 
 3. **Deploy** et attendez (~10-15 minutes)
 
-**Note**: Pour un déploiement automatisé avec votre `.env` local, utilisez la **Méthode 1 (Terraform)** qui injecte automatiquement votre configuration.
+- Au premier lancement : 
+```bash
+./deploy.sh init
+```
+- Vérification du plan d'exécution : 
+```bash
+./deploy.sh plan
+```
+- Déploiement sur upcloud selon le plan précédent :
+```bash
+./deploy.sh deploy
+```
 
 ### Monitoring
 
+Le user accessible en ssh est **llmadmin** (défini dans le cloud.init)
 ```bash
-ssh root@<IP>
+ssh llmadmin@<IP>
 tail -f /var/log/cloud-init-output.log
+docker ps
+htop
+# etc.
 ```
 
 ## Plans recommandés
 
 | Plan | vCPU | RAM | VRAM | Prix/mois* |
 |------|------|-----|------|-----------|
-| GPU-12xCPU-128GB-1xL40S | 12 | 128GB | 48GB L40S | ~€450 |
-| 16xCPU-64GB | 16 | 64GB | - | ~€320 |
-| 8xCPU-32GB | 8 | 32GB | - | ~€160 |
+| GPU-12xCPU-128GB-1xL40S | 12 | 128GB | 48GB L40S | ~€900 |
 
 *Prix approximatifs
+
+L'instance ne restera allumée qu'une fraction de chaque journée, et les coûts seront divisés en conséquence
 
 ## Ce qui est déployé
 
@@ -83,6 +96,7 @@ tail -f /var/log/cloud-init-output.log
 - Caddy (reverse proxy HTTPS automatique)
 - Systemd service (auto-start au boot)
 - Model gpt-oss:120b (~65GB)
+- Stack paddleOCR (API + moteur)
 - Backups quotidiens
 
 ## Accès

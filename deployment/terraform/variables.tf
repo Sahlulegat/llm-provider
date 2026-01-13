@@ -8,6 +8,12 @@ variable "hostname" {
   default     = "llm-provider"
 }
 
+variable "ssh_public_key" {
+  description = "SSH public key for server access"
+  type        = string
+  sensitive   = true
+}
+
 variable "zone" {
   description = "UpCloud zone (e.g., fi-hel2, de-fra1)"
   type        = string

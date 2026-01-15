@@ -149,3 +149,9 @@ variable "acme_email" {
   type        = string
   default     = ""
 }
+
+variable "floating_ip" {
+  description = "Floating IP address for netplan configuration (leave empty if none)"
+  type        = string
+  default     = ""
+}

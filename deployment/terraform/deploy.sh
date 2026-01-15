@@ -25,15 +25,56 @@ fi
 echo "✓ UpCloud credentials configured"
 echo ""
 
+# Function to check and import floating IP if needed
+check_floating_ip_import() {
+    # Check if floating IP is configured
+    if [ -z "$TF_VAR_floating_ip" ] || [ "$TF_VAR_floating_ip" == "" ]; then
+        echo "ℹ No floating IP configured (TF_VAR_floating_ip is empty)"
+        return 0
+    fi
+
+    echo "✓ Floating IP configured: $TF_VAR_floating_ip"
+
+    # Check if terraform state exists
+    if [ ! -f "terraform.tfstate" ] && [ ! -f ".terraform/terraform.tfstate" ]; then
+        echo "⚠ No terraform state found. Run './deploy.sh init' first."
+        return 0
+    fi
+
+    # Check if floating IP is already in state
+    if terraform state list 2>/dev/null | grep -q "upcloud_floating_ip_address.main"; then
+        echo "✓ Floating IP already imported in Terraform state"
+        return 0
+    fi
+
+    # Import floating IP
+    echo ""
+    echo "📥 Importing floating IP $TF_VAR_floating_ip into Terraform state..."
+    echo "   This is required before first apply to attach the IP to the server."
+    echo ""
+
+    if terraform import "upcloud_floating_ip_address.main[0]" "$TF_VAR_floating_ip"; then
+        echo "✓ Floating IP successfully imported"
+        echo ""
+    else
+        echo "❌ Failed to import floating IP"
+        echo "   Make sure the IP exists in UpCloud and is not already managed by another Terraform state."
+        echo ""
+        exit 1
+    fi
+}
+
 # Run terraform command
 case "$1" in
     init)
         terraform init
         ;;
     plan)
+        check_floating_ip_import
         terraform plan
         ;;
     apply)
+        check_floating_ip_import
         terraform apply
         ;;
     destroy)

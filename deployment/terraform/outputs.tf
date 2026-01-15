@@ -18,6 +18,11 @@ output "ipv6_address" {
   value       = upcloud_server.main.network_interface[2].ip_address
 }
 
+output "floating_ip_address" {
+  description = "Floating IP address (if configured)"
+  value       = var.floating_ip != "" ? var.floating_ip : "none"
+}
+
 output "ssh_command" {
   description = "SSH connection command"
   value       = "ssh llmadmin@${upcloud_server.main.network_interface[0].ip_address}"

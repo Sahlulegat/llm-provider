@@ -43,6 +43,7 @@ resource "upcloud_server" "main" {
     webui_auth               = var.webui_auth
     domain_name              = var.domain_name
     acme_email               = var.acme_email
+    floating_ip              = var.floating_ip
   })
   template {
     storage = "Ubuntu Server 24.04 LTS (with NVIDIA drivers & CUDA)"
@@ -67,6 +68,23 @@ resource "upcloud_server" "main" {
   simple_backup {
     plan = var.backup_plan
     time = var.backup_time
+  }
+}
+
+# Floating IP - Terraform attaches it to the server but never deletes it
+# The IP must be imported first: terraform import 'upcloud_floating_ip_address.main[0]' <ip>
+# On destroy: server is deleted but floating IP remains (prevent_destroy)
+# On apply: server is recreated and floating IP is re-attached
+resource "upcloud_floating_ip_address" "main" {
+  count       = var.floating_ip != "" ? 1 : 0
+  zone        = var.zone
+  mac_address = upcloud_server.main.network_interface[0].mac_address
+  access      = "public"
+  family      = "IPv4"
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [ip_address]  # IP is set during import, never changed
   }
 }
 

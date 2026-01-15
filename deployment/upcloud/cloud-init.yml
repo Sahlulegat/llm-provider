@@ -21,6 +21,23 @@ runcmd:
   - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
   - chmod 440 /etc/sudoers.d/llmadmin
 
+  # Configure floating IP if provided
+  - |
+    if [ -n "${floating_ip}" ]; then
+      cat > /etc/netplan/99-floating-ip.yaml << EOF
+    network:
+      version: 2
+      renderer: networkd
+      ethernets:
+        eth0:
+          addresses:
+            - ${floating_ip}/32
+    EOF
+      chmod 600 /etc/netplan/99-floating-ip.yaml
+      netplan apply
+      echo "Floating IP ${floating_ip} configured" >> /var/log/cloud-init-output.log
+    fi
+
   # Upgrade packages except nvidia drivers (doesnt work otherwise)
   - apt-mark hold "nvidia*" "libnvidia*"
   - apt-get upgrade -y

@@ -1,32 +1,52 @@
 #!/bin/bash
-# Monitor Ollama API inactivity and shutdown server to save costs
+# Monitor LLM Provider inactivity and shutdown server to save costs
+# Checks both API calls and WebUI access
 
-# Config
-THRESHOLD_SECONDS=3600  # 1 hour
-LOG_FILE="/opt/llm-provider/data/caddy/api-access.log"
+# Config (INACTIVITY_TIMEOUT can be set via environment, default 1 hour)
+THRESHOLD_SECONDS=${INACTIVITY_TIMEOUT:-3600}
+LOG_DIR="/opt/llm-provider/data/caddy"
+API_LOG="$LOG_DIR/api-access.log"
+WEBUI_LOG="$LOG_DIR/access.log"
 
-# Check log exists
-if [ ! -f "$LOG_FILE" ]; then
-    echo "No log file yet, skipping"
-    exit 0
+# Get most recent timestamp from a log file (returns empty if no match)
+get_last_ts() {
+    local file="$1"
+    [ -f "$file" ] && tac "$file" | grep -m1 '"ts":' | sed -n 's/.*"ts":\([0-9.]*\).*/\1/p' || true
+}
+
+# Get the most recent timestamp across all logs
+LAST_API_TS=$(get_last_ts "$API_LOG")
+LAST_WEBUI_TS=$(get_last_ts "$WEBUI_LOG")
+
+# Find the most recent activity
+LAST_TS=""
+if [ -n "$LAST_API_TS" ] && [ -n "$LAST_WEBUI_TS" ]; then
+    # Both have timestamps, take the most recent
+    if [ "${LAST_API_TS%.*}" -gt "${LAST_WEBUI_TS%.*}" ]; then
+        LAST_TS="$LAST_API_TS"
+    else
+        LAST_TS="$LAST_WEBUI_TS"
+    fi
+elif [ -n "$LAST_API_TS" ]; then
+    LAST_TS="$LAST_API_TS"
+elif [ -n "$LAST_WEBUI_TS" ]; then
+    LAST_TS="$LAST_WEBUI_TS"
 fi
 
-# Find last Ollama API request timestamp (|| true prevents grep exit 1 when no match)
-LAST_TS=$(tac "$LOG_FILE" | grep -E '"/api/(generate|chat|embeddings|pull)"' | head -1 | sed -n 's/.*"ts":\([0-9.]*\).*/\1/p' || true)
-
-# No requests found
+# No activity found
 if [ -z "$LAST_TS" ]; then
-    echo "No API requests found in logs, skipping shutdown"
+    echo "No activity found in logs, skipping shutdown"
     exit 0
 fi
 
 # Calculate inactivity
 NOW=$(date +%s)
-LAST=${LAST_TS%.*}  # Remove decimals
+LAST=${LAST_TS%.*}
 INACTIVE=$((NOW - LAST))
 INACTIVE_MIN=$((INACTIVE / 60))
+THRESHOLD_MIN=$((THRESHOLD_SECONDS / 60))
 
-echo "[$(date '+%H:%M:%S')] Last request: ${INACTIVE_MIN}m ago (threshold: $((THRESHOLD_SECONDS/60))m)"
+echo "[$(date '+%H:%M:%S')] Last activity: ${INACTIVE_MIN}m ago (threshold: ${THRESHOLD_MIN}m)"
 
 # Shutdown if exceeded
 if [ "$INACTIVE" -gt "$THRESHOLD_SECONDS" ]; then

@@ -44,6 +44,7 @@ resource "upcloud_server" "main" {
     domain_name              = var.domain_name
     acme_email               = var.acme_email
     floating_ip              = var.floating_ip
+    inactivity_timeout       = var.inactivity_timeout
   })
   template {
     storage = "Ubuntu Server 24.04 LTS (with NVIDIA drivers & CUDA)"

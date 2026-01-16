@@ -141,7 +141,7 @@ runcmd:
     chmod +x /opt/llm-provider/scripts/monitor-inactivity.sh
 
     # Create systemd service for the monitor
-    cat > /etc/systemd/system/llm-monitor-inactivity.service << 'EOFSERVICE'
+    cat > /etc/systemd/system/llm-monitor-inactivity.service << EOFSERVICE
     [Unit]
     Description=Monitor LLM API inactivity for auto-shutdown
     After=network.target llm-provider.service
@@ -149,6 +149,7 @@ runcmd:
 
     [Service]
     Type=oneshot
+    Environment=INACTIVITY_TIMEOUT=${inactivity_timeout}
     ExecStart=/bin/bash /opt/llm-provider/scripts/monitor-inactivity.sh
     StandardOutput=journal
     StandardError=journal

@@ -155,3 +155,9 @@ variable "floating_ip" {
   type        = string
   default     = ""
 }
+
+variable "inactivity_timeout" {
+  description = "Inactivity timeout in seconds before auto-shutdown (default 1 hour)"
+  type        = number
+  default     = 3600
+}

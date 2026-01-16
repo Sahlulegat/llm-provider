@@ -78,7 +78,30 @@ case "$1" in
         terraform apply
         ;;
     destroy)
+        echo ""
+        echo "⚠️  Destroying infrastructure (keeping floating IP)..."
+        echo ""
+
+        # Remove floating IP from Terraform state (prevents destroy attempt)
+        if [ -n "$TF_VAR_floating_ip" ] && [ "$TF_VAR_floating_ip" != "" ]; then
+            if terraform state list 2>/dev/null | grep -q "upcloud_floating_ip_address.main"; then
+                echo "📤 Removing floating IP from Terraform state..."
+                terraform state rm 'upcloud_floating_ip_address.main[0]'
+                echo "✓ Floating IP $TF_VAR_floating_ip removed from state (will be re-imported on next apply)"
+                echo ""
+            fi
+        fi
+
+        # Now destroy all remaining resources
         terraform destroy
+
+        echo ""
+        echo "✅ Infrastructure destroyed"
+        if [ -n "$TF_VAR_floating_ip" ] && [ "$TF_VAR_floating_ip" != "" ]; then
+            echo "   Floating IP $TF_VAR_floating_ip preserved in UpCloud"
+            echo "   (Will be automatically re-imported on next apply)"
+        fi
+        echo "   To recreate: ./deploy.sh apply"
         ;;
     output)
         terraform output

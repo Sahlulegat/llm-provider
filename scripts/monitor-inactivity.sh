@@ -6,7 +6,7 @@ set -euo pipefail
 
 # Config
 THRESHOLD_SECONDS=3600  # 1 hour
-LOG_FILE="/opt/llm-provider/data/api-access.log"
+LOG_FILE="/opt/llm-provider/data/caddy/api-access.log"
 
 # Check log exists
 [ ! -f "$LOG_FILE" ] && echo "No log file yet, skipping" && exit 0

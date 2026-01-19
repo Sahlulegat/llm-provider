@@ -14,80 +14,9 @@ packages:
   - python3
   - python3-pip
 
-write_files:
-  - path: /etc/llm-provider-initialized
-    content: |
-      LLM Provider initialized from GitHub
-      Repository: https://github.com/Sahlulegat/llm-provider
-      Model: ${model_name}
-      GPU Support: NVIDIA with CUDA
-    owner: root:root
-    permissions: '0644'
-
-  - path: /etc/systemd/system/llm-provider.service
-    content: |
-      [Unit]
-      Description=LLM Provider - Ollama and Open WebUI
-      Requires=docker.service
-      After=docker.service network-online.target
-      Wants=network-online.target
-
-      [Service]
-      Type=oneshot
-      RemainAfterExit=yes
-      WorkingDirectory=/opt/llm-provider
-      ExecStart=/usr/bin/make start
-      ExecStop=/usr/bin/docker-compose down
-      User=root
-      StandardOutput=journal
-      StandardError=journal
-      TimeoutStartSec=600
-      LimitNOFILE=65536
-      LimitNPROC=4096
-
-      [Install]
-      WantedBy=multi-user.target
-    owner: root:root
-    permissions: '0644'
-
-  - path: /etc/systemd/system/llm-monitor-inactivity.service
-    content: |
-      [Unit]
-      Description=Monitor LLM API inactivity for auto-shutdown
-      After=network.target llm-provider.service
-      Requires=llm-provider.service
-
-      [Service]
-      Type=oneshot
-      Environment=INACTIVITY_TIMEOUT=${inactivity_timeout}
-      ExecStart=/bin/bash /opt/llm-provider/scripts/monitor-inactivity.sh
-      StandardOutput=journal
-      StandardError=journal
-      User=root
-
-      [Install]
-      WantedBy=multi-user.target
-    owner: root:root
-    permissions: '0644'
-
-  - path: /etc/systemd/system/llm-monitor-inactivity.timer
-    content: |
-      [Unit]
-      Description=Run LLM inactivity monitor every 5 minutes
-      Requires=llm-monitor-inactivity.service
-
-      [Timer]
-      OnBootSec=10min
-      OnUnitActiveSec=5min
-      Unit=llm-monitor-inactivity.service
-
-      [Install]
-      WantedBy=timers.target
-    owner: root:root
-    permissions: '0644'
-
 runcmd:
   # Configure llmadmin user (created by UpCloud login block)
+  # Add to docker and sudo groups
   - usermod -aG sudo llmadmin || true
   - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
   - chmod 440 /etc/sudoers.d/llmadmin
@@ -95,7 +24,7 @@ runcmd:
   # Configure floating IP if provided
   - |
     if [ -n "${floating_ip}" ]; then
-      cat > /etc/netplan/99-floating-ip.yaml << 'EOFNETPLAN'
+      cat > /etc/netplan/99-floating-ip.yaml << EOF
     network:
       version: 2
       renderer: networkd
@@ -103,22 +32,23 @@ runcmd:
         eth0:
           addresses:
             - ${floating_ip}/32
-    EOFNETPLAN
+    EOF
       chmod 600 /etc/netplan/99-floating-ip.yaml
       netplan apply
       echo "Floating IP ${floating_ip} configured" >> /var/log/cloud-init-output.log
     fi
 
-  # Upgrade packages except nvidia drivers
+  # Upgrade packages except nvidia drivers (doesnt work otherwise)
   - apt-mark hold "nvidia*" "libnvidia*"
   - apt-get upgrade -y
-
   # Install Docker
   - curl -fsSL https://get.docker.com -o get-docker.sh
   - sh get-docker.sh
   - systemctl enable docker
   - systemctl start docker
   - rm get-docker.sh
+
+  # Add llmadmin to docker group (now that docker is installed)
   - usermod -aG docker llmadmin
 
   # Install NVIDIA Container Toolkit
@@ -137,12 +67,13 @@ runcmd:
 
   # Clone project from GitHub
   - git clone https://github.com/Sahlulegat/llm-provider.git /opt/llm-provider
+  - cd /opt/llm-provider
 
   # Generate Fernet key and create .env
   - pip3 install cryptography
   - |
     FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-    cat > /opt/llm-provider/.env << EOFENV
+    cat > /opt/llm-provider/.env << EOF
     OLLAMA_PORT=${ollama_port}
     OLLAMA_ORIGINS=${ollama_origins}
     OLLAMA_KEEP_ALIVE=${ollama_keep_alive}
@@ -160,14 +91,39 @@ runcmd:
     WEBUI_AUTH=${webui_auth}
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
-    EOFENV
+    EOF
 
   # Set permissions
   - chown -R llmadmin:llmadmin /opt/llm-provider
   - chmod 600 /opt/llm-provider/.env
-  - chmod +x /opt/llm-provider/scripts/monitor-inactivity.sh
 
-  # Enable and start services
+  # Create systemd service
+  - |
+    cat > /etc/systemd/system/llm-provider.service << 'EOF'
+    [Unit]
+    Description=LLM Provider - Ollama and Open WebUI
+    Requires=docker.service
+    After=docker.service network-online.target
+    Wants=network-online.target
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    WorkingDirectory=/opt/llm-provider
+    ExecStart=/usr/bin/make start
+    ExecStop=/usr/bin/docker-compose down
+    User=root
+    StandardOutput=journal
+    StandardError=journal
+    TimeoutStartSec=600
+    LimitNOFILE=65536
+    LimitNPROC=4096
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+  # Enable and start service
   - systemctl daemon-reload
   - systemctl enable llm-provider.service
   - systemctl start llm-provider.service
@@ -178,13 +134,68 @@ runcmd:
   - docker exec ollama-provider ollama pull ${model_name}
   - echo "Model ${model_name} pulled successfully at $(date)" >> /var/log/cloud-init-output.log
 
-  # Enable and start inactivity monitor
-  - systemctl enable llm-monitor-inactivity.timer
-  - systemctl start llm-monitor-inactivity.timer
-  - echo "Auto-shutdown monitoring configured (timeout: ${inactivity_timeout}s)" >> /var/log/cloud-init-output.log
+  # Setup auto-shutdown monitoring for cost optimization
+  - echo "Setting up auto-shutdown monitoring..." >> /var/log/cloud-init-output.log
+  - |
+    # Copy monitoring script from repo to its target location
+    chmod +x /opt/llm-provider/scripts/monitor-inactivity.sh
+
+    # Create systemd service for the monitor
+    cat > /etc/systemd/system/llm-monitor-inactivity.service << EOFSERVICE
+    [Unit]
+    Description=Monitor LLM API inactivity for auto-shutdown
+    After=network.target llm-provider.service
+    Requires=llm-provider.service
+
+    [Service]
+    Type=oneshot
+    Environment=INACTIVITY_TIMEOUT=${inactivity_timeout}
+    ExecStart=/bin/bash /opt/llm-provider/scripts/monitor-inactivity.sh
+    StandardOutput=journal
+    StandardError=journal
+    User=root
+
+    [Install]
+    WantedBy=multi-user.target
+    EOFSERVICE
+
+    # Create systemd timer to run every 5 minutes
+    cat > /etc/systemd/system/llm-monitor-inactivity.timer << 'EOFTIMER'
+    [Unit]
+    Description=Run LLM inactivity monitor every 5 minutes
+    Requires=llm-monitor-inactivity.service
+
+    [Timer]
+    # First check 10 minutes after boot (give services time to start)
+    OnBootSec=10min
+    # Then check every 5 minutes
+    OnUnitActiveSec=5min
+    Unit=llm-monitor-inactivity.service
+
+    [Install]
+    WantedBy=timers.target
+    EOFTIMER
+
+    # Enable and start the timer
+    systemctl daemon-reload
+    systemctl enable llm-monitor-inactivity.timer
+    systemctl start llm-monitor-inactivity.timer
+
+    echo "Auto-shutdown monitoring configured and activated" >> /var/log/cloud-init-output.log
+    echo "Monitor runs every 5 minutes, checks for 1h+ inactivity" >> /var/log/cloud-init-output.log
 
   # Log completion
   - echo "LLM Provider setup completed at $(date)" >> /var/log/cloud-init-output.log
+
+write_files:
+  - path: /etc/llm-provider-initialized
+    content: |
+      LLM Provider initialized from GitHub
+      Repository: https://github.com/Sahlulegat/llm-provider
+      Model: ${model_name}
+      GPU Support: NVIDIA with CUDA
+    owner: root:root
+    permissions: '0644'
 
 final_message: |
   ============================================

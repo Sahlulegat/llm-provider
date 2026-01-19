@@ -161,3 +161,39 @@ variable "inactivity_timeout" {
   type        = number
   default     = 3600
 }
+
+variable "allowed_ips" {
+  description = "Comma-separated list of allowed IP addresses/ranges (CIDR notation) for Caddy whitelist"
+  type        = string
+  default     = ""
+}
+
+variable "wireguard_peers" {
+  description = "Number of Wireguard peer configurations to generate"
+  type        = number
+  default     = 1
+}
+
+variable "wireguard_serverurl" {
+  description = "Wireguard server URL (use floating_ip or domain)"
+  type        = string
+  default     = "auto"
+}
+
+variable "wireguard_serverport" {
+  description = "Wireguard server UDP port"
+  type        = number
+  default     = 51820
+}
+
+variable "wireguard_peerdns" {
+  description = "DNS server for Wireguard clients"
+  type        = string
+  default     = "1.1.1.1"
+}
+
+variable "wireguard_internal_subnet" {
+  description = "Internal VPN subnet"
+  type        = string
+  default     = "10.13.13.0"
+}

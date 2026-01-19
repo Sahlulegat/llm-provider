@@ -45,6 +45,12 @@ resource "upcloud_server" "main" {
     acme_email               = var.acme_email
     floating_ip              = var.floating_ip
     inactivity_timeout       = var.inactivity_timeout
+    allowed_ips              = var.allowed_ips
+    wireguard_peers          = var.wireguard_peers
+    wireguard_serverurl      = var.wireguard_serverurl
+    wireguard_serverport     = var.wireguard_serverport
+    wireguard_peerdns        = var.wireguard_peerdns
+    wireguard_internal_subnet = var.wireguard_internal_subnet
   })
   template {
     storage = "Ubuntu Server 24.04 LTS (with NVIDIA drivers & CUDA)"
@@ -140,5 +146,15 @@ resource "upcloud_firewall_rules" "main" {
     direction              = "in"
     family                 = "IPv4"
     protocol               = "tcp"
+  }
+
+  firewall_rule {
+    action                 = "accept"
+    comment                = "Allow Wireguard VPN"
+    destination_port_end   = "51820"
+    destination_port_start = "51820"
+    direction              = "in"
+    family                 = "IPv4"
+    protocol               = "udp"
   }
 }

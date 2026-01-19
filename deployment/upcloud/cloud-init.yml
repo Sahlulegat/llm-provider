@@ -91,6 +91,12 @@ runcmd:
     WEBUI_AUTH=${webui_auth}
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
+    ALLOWED_IPS=${allowed_ips}
+    WIREGUARD_PEERS=${wireguard_peers}
+    WIREGUARD_SERVERURL=${wireguard_serverurl}
+    WIREGUARD_SERVERPORT=${wireguard_serverport}
+    WIREGUARD_PEERDNS=${wireguard_peerdns}
+    WIREGUARD_INTERNAL_SUBNET=${wireguard_internal_subnet}
     EOF
 
   # Set permissions

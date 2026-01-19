@@ -96,6 +96,7 @@ services:
     image: lscr.io/linuxserver/wireguard:latest
     container_name: wireguard-vpn
     restart: unless-stopped
+    network_mode: host
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -115,10 +116,6 @@ services:
       - /lib/modules:/lib/modules:ro
     ports:
       - "${WIREGUARD_SERVERPORT:-51820}:51820/udp"
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    networks:
-      - llm-network
 
   caddy:
     image: caddy:2-alpine

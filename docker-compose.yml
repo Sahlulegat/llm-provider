@@ -3,8 +3,6 @@ services:
     image: ollama/ollama:latest
     container_name: ollama-provider
     restart: unless-stopped
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ./data/ollama:/root/.ollama
       - ./logs:/logs
@@ -25,8 +23,6 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
     restart: unless-stopped
-    ports:
-      - "${WEBUI_PORT:-3000}:8080"
     volumes:
       - ./data/open-webui:/app/backend/data
     environment:
@@ -48,8 +44,6 @@ services:
     user: root
     restart: unless-stopped
     profiles : ["paddle"]
-    ports:
-      - "8080:8080"
     volumes:
       - ./pipeline_config.yaml:/opt/pipeline_config.yaml:ro
     environment:
@@ -143,7 +137,7 @@ services:
     environment:
       - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
       - ACME_EMAIL=${ACME_EMAIL:-}
-      - ALLOWED_IPS=${ALLOWED_IPS:-}
+      - ALLOWED_IPS=${ALLOWED_IPS:-0.0.0.0/0}
 
 networks:
   llm-network:

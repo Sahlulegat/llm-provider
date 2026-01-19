@@ -110,26 +110,6 @@ resource "upcloud_firewall_rules" "main" {
 
   firewall_rule {
     action                 = "accept"
-    comment                = "Allow Ollama API"
-    destination_port_end   = "11434"
-    destination_port_start = "11434"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-  }
-
-  firewall_rule {
-    action                 = "accept"
-    comment                = "Allow Open WebUI"
-    destination_port_end   = "3000"
-    destination_port_start = "3000"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-  }
-
-  firewall_rule {
-    action                 = "accept"
     comment                = "Allow HTTP"
     destination_port_end   = "80"
     destination_port_start = "80"

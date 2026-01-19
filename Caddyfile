@@ -4,14 +4,15 @@
 {
 	# Email pour Let's Encrypt
 	email {$ACME_EMAIL}
-	# Snippet pour whitelist IP
-	snippet ip_whitelist {
-		@blocked_ip {
-			not remote_ip {$ALLOWED_IPS}
-		}
-		handle @blocked_ip {
-			abort
-		}
+}
+
+# Snippet pour whitelist IP
+(ip_whitelist) {
+	@blocked_ip {
+		not remote_ip {$ALLOWED_IPS}
+	}
+	handle @blocked_ip {
+		abort
 	}
 }
 

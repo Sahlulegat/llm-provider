@@ -110,26 +110,6 @@ resource "upcloud_firewall_rules" "main" {
 
   firewall_rule {
     action                 = "accept"
-    comment                = "Allow HTTP"
-    destination_port_end   = "80"
-    destination_port_start = "80"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-  }
-
-  firewall_rule {
-    action                 = "accept"
-    comment                = "Allow HTTPS"
-    destination_port_end   = "443"
-    destination_port_start = "443"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-  }
-
-  firewall_rule {
-    action                 = "accept"
     comment                = "Allow Wireguard VPN"
     destination_port_end   = "51820"
     destination_port_start = "51820"

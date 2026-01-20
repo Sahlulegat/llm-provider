@@ -34,7 +34,7 @@ max_attempts=30
 attempt=0
 
 while [ $attempt -lt $max_attempts ]; do
-    if curl -s http://localhost:${OLLAMA_PORT:-11434}/api/tags > /dev/null 2>&1; then
+    if curl -sk https://api.${DOMAIN_NAME:-localhost}/api/tags > /dev/null 2>&1; then
         echo -e "${GREEN}Ollama is ready!${NC}"
         break
     fi

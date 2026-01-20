@@ -1,141 +1,78 @@
-# Caddyfile - Configuration reverse proxy pour LLM Provider
-# S'adapte automatiquement : HTTPS si domaine configuré, sinon inactif
+# Caddyfile - HTTPS avec certificat auto-signé via VPN
+# Accès uniquement via VPN - Ports 80/443 fermés dans le firewall UpCloud
 
+# Block global - Désactiver ACME/Let's Encrypt
 {
-	# Email pour Let's Encrypt
-	email {$ACME_EMAIL}
-}
-
-# Snippet pour whitelist IP
-(ip_whitelist) {
-	@blocked_ip {
-		not remote_ip {$ALLOWED_IPS}
-	}
-	handle @blocked_ip {
-		abort
-	}
+	# Pas d'email ACME
 }
 
 # Open WebUI - Interface principale
 {$DOMAIN_NAME:localhost} {
-	# Activer la compression
-	encode gzip zstd
+	# Certificat auto-signé généré par Caddy
+	tls internal
 
-	# Logs globaux pour ce site
 	log {
 		output file /data/access.log
 		format json
 	}
 
-	# Si localhost, message informatif
-	@localhost {
-		host localhost
-	}
+	reverse_proxy open-webui:8080
 
-	# Pour les vrais domaines
-	@domain {
-		not host localhost
-	}
-
-	handle @domain {
-		# Whitelist IP (si configurée)
-		import ip_whitelist
-
-		reverse_proxy open-webui:8080
-
-		# Headers de sécurité
-		header {
-			-Server
-			X-Content-Type-Options "nosniff"
-			X-Frame-Options "SAMEORIGIN"
-			X-XSS-Protection "1; mode=block"
-			Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-		}
-	}
-
-	handle @localhost {
-		respond "Accès local : http://localhost:3000 (WebUI) et http://localhost:11434 (API)" 200
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		X-XSS-Protection "1; mode=block"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	}
 }
 
-# API Ollama - Sous-domaine séparé
+# API Ollama
 api.{$DOMAIN_NAME:localhost} {
-	# Activer la compression
-	encode gzip zstd
+	# Certificat auto-signé généré par Caddy
+	tls internal
 
-	# Logs globaux pour l'API
 	log {
 		output file /data/api-access.log
 		format json
 	}
 
-	@domain {
-		not host api.localhost
-		not host localhost
-	}
-
-	handle @domain {
-		# Whitelist IP (si configurée)
-		import ip_whitelist
-
-		reverse_proxy ollama:11434 {
-			# Timeouts augmentés pour inférences longues (120B model)
-			transport http {
-				dial_timeout 30s
-				read_timeout 600s
-				write_timeout 600s
-			}
-		}
-
-		# Headers de sécurité
-		header {
-			-Server
-			X-Content-Type-Options "nosniff"
+	reverse_proxy ollama:11434 {
+		# Timeouts augmentés pour inférences longues (120B model)
+		transport http {
+			dial_timeout 30s
+			read_timeout 600s
+			write_timeout 600s
 		}
 	}
 
-	handle {
-		respond "Accès API local : http://localhost:11434" 200
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
 	}
 }
 
 # API OCR - PaddleOCR-VL
 ocr.{$DOMAIN_NAME:localhost} {
-    # Activer la compression
-    encode gzip zstd
+	# Certificat auto-signé généré par Caddy
+	tls internal
 
-    # Logs globaux pour l'API OCR
-    log {
-        output file /data/ocr-access.log
-        format json
-    }
+	log {
+		output file /data/ocr-access.log
+		format json
+	}
 
-    @domain {
-        not host ocr.localhost
-        not host localhost
-    }
+	reverse_proxy paddleocr-vl-api:8080 {
+		# Timeouts augmentés pour parsing de gros PDFs
+		transport http {
+			dial_timeout 30s
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
 
-    handle @domain {
-        # Whitelist IP (si configurée)
-        import ip_whitelist
-
-        reverse_proxy paddleocr-vl-api:8080 {
-            # Timeouts augmentés pour parsing de gros PDFs
-            transport http {
-                dial_timeout 30s
-                read_timeout 300s
-                write_timeout 300s
-            }
-        }
-
-        # Headers de sécurité
-        header {
-            -Server
-            X-Content-Type-Options "nosniff"
-        }
-    }
-
-    handle {
-        respond "Accès API OCR local : http://localhost:8080" 200
-    }
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+	}
 }

@@ -117,4 +117,37 @@ resource "upcloud_firewall_rules" "main" {
     family                 = "IPv4"
     protocol               = "udp"
   }
+
+  # Default deny rules - drop all other incoming traffic
+  firewall_rule {
+    action    = "drop"
+    comment   = "Drop all other incoming TCP (IPv4)"
+    direction = "in"
+    family    = "IPv4"
+    protocol  = "tcp"
+  }
+
+  firewall_rule {
+    action    = "drop"
+    comment   = "Drop all other incoming UDP (IPv4)"
+    direction = "in"
+    family    = "IPv4"
+    protocol  = "udp"
+  }
+
+  firewall_rule {
+    action    = "drop"
+    comment   = "Drop all other incoming TCP (IPv6)"
+    direction = "in"
+    family    = "IPv6"
+    protocol  = "tcp"
+  }
+
+  firewall_rule {
+    action    = "drop"
+    comment   = "Drop all other incoming UDP (IPv6)"
+    direction = "in"
+    family    = "IPv6"
+    protocol  = "udp"
+  }
 }

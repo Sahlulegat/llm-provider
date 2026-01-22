@@ -10,7 +10,7 @@ Déploiement automatisé sur UpCloud avec Terraform.
 
 ## Configuration
 
-### 0. Configurer votre .env local
+### 0. Configurer .env local
 
 **Terraform va copier votre `.env` local** vers le serveur cloud automatiquement.
 
@@ -41,14 +41,7 @@ MODEL_NAME=gpt-oss:120b
 - Elle sera **automatiquement générée de façon sécurisée** sur le serveur
 - Pas besoin de la générer localement !
 
-### 1. Créer les credentials API UpCloud
-
-Dans [UpCloud Control Panel](https://hub.upcloud.com/):
-- People → Permissions → API Credentials
-- Create API credentials
-- Notez le username et password
-
-### 2. Configurer les credentials
+### 1. Configurer les credentials
 
 **Option A - Via .env (Recommandé)**
 
@@ -71,12 +64,14 @@ export UPCLOUD_PASSWORD="your-api-password"
 terraform plan
 ```
 
-### 3. Configurer les variables
+### 2. Configurer les variables
 
 ```bash
 cp terraform.tfvars.example terraform.tfvars
 nano terraform.tfvars
 ```
+
+Normalement, tout peut être laissé par défaut
 
 ## Déploiement
 
@@ -144,7 +139,7 @@ terraform destroy
 
 ## Firewall
 
-Le firewall est activé avec les règles :
+Le firewall est activé avec les règles (en cours de configuration, les valeurs ci-dessous sont à vérifier):
 - SSH (22)
 - Ollama API (11434)
 - Open WebUI (3000)
@@ -154,34 +149,14 @@ Le firewall est activé avec les règles :
 
 ### Protection des secrets
 
-Votre `.env` est copié vers le serveur mais :
-
-✅ **Sécurisé** :
-- `WEBUI_SECRET_KEY` générée de façon unique sur chaque serveur
-- Fichier `.env` protégé avec `chmod 600` sur le serveur
-- Logs cloud-init accessibles uniquement via root
-
-⚠️ **Attention** :
-- Ne committez JAMAIS votre `.env` dans Git (déjà dans `.gitignore`)
-- Les secrets passent par Terraform state (stocké localement)
-- Protégez votre fichier `terraform.tfstate` (contient l'état)
+Le .env n'est pas commit, mais est recréé côté serveur via transmission des variables (.env => Variable d'env TF_VAR_ => Variable terraform => Création du .env via cloud init)
 
 ### Après déploiement
-
-Recommandations de sécurité :
 
 ```bash
 # 1. Connectez-vous au serveur
 ssh root@<IP>
 
-# 2. Vérifiez que la FERNET_KEY a été générée
-grep WEBUI_SECRET_KEY /opt/llm-provider/.env
-
-# 3. Créez votre compte admin dans Open WebUI
-# Puis désactivez l'inscription publique
-nano /opt/llm-provider/.env
-# Changez: ENABLE_SIGNUP=false
-
-# 4. Redémarrez les services
-cd /opt/llm-provider && make restart
+# 2. Vérifiez l'état des conteneurs
+docker ps
 ```

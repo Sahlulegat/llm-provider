@@ -4,7 +4,11 @@ Infrastructure pour déployer Ollama avec GPT-OSS 120B et Open WebUI.
 
 **Repository**: https://github.com/Sahlulegat/llm-provider
 
+doc détaillée : https://packsolutions.atlassian.net/wiki/spaces/~5e4185ad2110470c8da0dbc9/pages/3429564467/Machines+IA+Upcloud
+
 ## Quick Start
+
+Cette partie concerne le lancement **local** de la stack. Pour les détails de la partie cloud / terraform, voir dans le répertoire deployment [Déploiement UpCloud](deployment/README.md)
 
 ```bash
 git clone https://github.com/Sahlulegat/llm-provider.git
@@ -17,18 +21,36 @@ make start
 
 Accédez à l'interface web : **http://localhost:3000** (local) ou **https://votre-domaine.com** (production)
 
+Vous pouvez appeler les APIs ollama et paddleOCR ainsi : 
+
+```bash
+# paddleocr : 
+curl -X POST https://ocr.sahlu.dev/layout-parsing -H 'Content-Type: application/json' -d '{
+   "file": "./DEMANDE_P47_ANONYME.pdf",
+   "fileType": 1
+}' | jq '.result.layoutParsingResults[0].markdown.text'
+
+# ollama : 
+curl -X POST https://api.sahlu.dev/api/generate -H "Content-Type: application/json" -d '{
+   "model": "gpt-oss:120b",
+   "prompt": "Écris un haiku sur le cloud computing",
+   "stream": false
+}'
+
+```
+
 ## Architecture
 
 ```
 llm-provider/
 ├── docker-compose.yml        # Stack avec Caddy pour HTTPS
 ├── Caddyfile                 # Configuration reverse proxy
-├── .env                      # Variables (ne pas commiter)
+├── .env                      # Variables d'env / config de la stack (à ne pas commit)
 ├── .env.example
 ├── Makefile
 ├── deployment/
 │   └── upcloud/
-│       └── cloud-init.yml    # Déploiement automatique
+│       └── cloud-init.yml    # Déploiement automatique sur upcloud
 └── scripts/
 ```
 
@@ -100,12 +122,6 @@ Pour exposer sur le web avec HTTPS automatique, configurez simplement votre doma
    make start
    ```
 
-**C'est tout !** Caddy détecte automatiquement le domaine et active HTTPS :
-- ✅ Certificats SSL Let's Encrypt automatiques
-- ✅ Renouvellement automatique
-- ✅ Redirection HTTP → HTTPS
-- ✅ Headers de sécurité
-
 **Sécurité** :
 - Activez le firewall (ports 22, 80, 443 uniquement)
 - Désactivez l'inscription après création admin : `ENABLE_SIGNUP=false`
@@ -134,12 +150,3 @@ docker ps -a           # État des conteneurs
 df -h                  # Espace disque
 nvidia-smi             # GPU status
 ```
-
-## Docs
-
-- **[Guide de déploiement](DEPLOYMENT.md)** - Comment votre .env local est copié vers le cloud
-- **[Guide HTTPS/Production](HTTPS.md)** - Configuration détaillée pour exposer sur le web
-- [Déploiement UpCloud](deployment/README.md) - Options Terraform et Cloud-Init
-- [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
-- [Open WebUI](https://github.com/open-webui/open-webui)
-- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)

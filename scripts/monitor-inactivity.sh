@@ -8,6 +8,7 @@ THRESHOLD_SECONDS=${INACTIVITY_TIMEOUT:-3600}
 LOG_DIR="/opt/llm-provider/data/caddy"
 API_LOG="$LOG_DIR/api-access.log"
 WEBUI_LOG="$LOG_DIR/access.log"
+OCR_LOG="$LOG_DIR/ocr-access.log"
 
 # Patterns to EXCLUDE (automatic polling, bots, ACME challenges)
 EXCLUDE_PATTERN='version\.json|\.well-known|robots\.txt|favicon|\.git'
@@ -24,20 +25,18 @@ get_last_ts() {
 # Get the most recent timestamp across all logs
 LAST_API_TS=$(get_last_ts "$API_LOG")
 LAST_WEBUI_TS=$(get_last_ts "$WEBUI_LOG")
+LAST_OCR_TS=$(get_last_ts "$OCR_LOG")
 
 # Find the most recent real activity
 LOG_TS=""
-if [ -n "$LAST_API_TS" ] && [ -n "$LAST_WEBUI_TS" ]; then
-    if [ "${LAST_API_TS%.*}" -gt "${LAST_WEBUI_TS%.*}" ]; then
-        LOG_TS="${LAST_API_TS%.*}"
-    else
-        LOG_TS="${LAST_WEBUI_TS%.*}"
+for ts in "$LAST_API_TS" "$LAST_WEBUI_TS" "$LAST_OCR_TS"; do
+    if [ -n "$ts" ]; then
+        ts_int="${ts%.*}"
+        if [ -z "$LOG_TS" ] || [ "$ts_int" -gt "$LOG_TS" ]; then
+            LOG_TS="$ts_int"
+        fi
     fi
-elif [ -n "$LAST_API_TS" ]; then
-    LOG_TS="${LAST_API_TS%.*}"
-elif [ -n "$LAST_WEBUI_TS" ]; then
-    LOG_TS="${LAST_WEBUI_TS%.*}"
-fi
+done
 
 # Use the MORE RECENT of: boot time or last log activity
 # This prevents instant shutdown after reboot (old logs would trigger shutdown)

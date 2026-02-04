@@ -1,6 +1,7 @@
 #cloud-config
-# UpCloud Cloud-Init - LLM Provider Deployment
+# UpCloud Cloud-Init - LLM Provider Deployment (Private Network Architecture)
 # Repository: https://github.com/Sahlulegat/llm-provider
+# This server runs on private network only, accessed via bastion and load balancer
 
 package_update: true
 package_upgrade: false # Prevents nvidia drivers from upgrading
@@ -21,26 +22,10 @@ runcmd:
   - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
   - chmod 440 /etc/sudoers.d/llmadmin
 
-  # Configure floating IP if provided
-  - |
-    if [ -n "${floating_ip}" ]; then
-      cat > /etc/netplan/99-floating-ip.yaml << EOF
-    network:
-      version: 2
-      renderer: networkd
-      ethernets:
-        eth0:
-          addresses:
-            - ${floating_ip}/32
-    EOF
-      chmod 600 /etc/netplan/99-floating-ip.yaml
-      netplan apply
-      echo "Floating IP ${floating_ip} configured" >> /var/log/cloud-init-output.log
-    fi
-
   # Upgrade packages except nvidia drivers (doesnt work otherwise)
   - apt-mark hold "nvidia*" "libnvidia*"
   - apt-get upgrade -y
+
   # Install Docker
   - curl -fsSL https://get.docker.com -o get-docker.sh
   - sh get-docker.sh
@@ -74,6 +59,7 @@ runcmd:
   - |
     FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
     cat > /opt/llm-provider/.env << EOF
+    # LLM Provider Configuration (Private Network Architecture)
     OLLAMA_PORT=${ollama_port}
     OLLAMA_ORIGINS=${ollama_origins}
     OLLAMA_KEEP_ALIVE=${ollama_keep_alive}
@@ -92,11 +78,9 @@ runcmd:
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
     ALLOWED_IPS=${allowed_ips}
-    WIREGUARD_PEERS=${wireguard_peers}
-    WIREGUARD_SERVERURL=${wireguard_serverurl}
-    WIREGUARD_SERVERPORT=${wireguard_serverport}
-    WIREGUARD_PEERDNS=${wireguard_peerdns}
-    WIREGUARD_INTERNAL_SUBNET=${wireguard_internal_subnet}
+    # Network architecture info
+    PRIVATE_NETWORK_CIDR=${private_network_cidr}
+    BASTION_IP=${bastion_private_ip}
     EOF
 
   # Set permissions
@@ -200,6 +184,7 @@ write_files:
       Repository: https://github.com/Sahlulegat/llm-provider
       Model: ${model_name}
       GPU Support: NVIDIA with CUDA
+      Network: Private (accessed via load balancer and bastion)
     owner: root:root
     permissions: '0644'
 
@@ -210,7 +195,12 @@ final_message: |
 
   GitHub: https://github.com/Sahlulegat/llm-provider
 
-  Services starting:
+  Network Architecture:
+  - This server is on private network only
+  - HTTP/HTTPS access via load balancer
+  - SSH access via bastion jump server
+
+  Services:
   - Ollama API: http://localhost:${ollama_port}
   - Open WebUI: http://localhost:${webui_port}
 

@@ -21,13 +21,13 @@ variable "zone" {
 }
 
 variable "plan" {
-  description = "Server plan (e.g., GPU-12xCPU-128GB-1xL40S)"
+  description = "LLM Server plan (e.g., GPU-12xCPU-128GB-1xL40S)"
   type        = string
   default     = "GPU-12xCPU-128GB-1xL40S"
 }
 
 variable "storage_size" {
-  description = "Storage size in GB"
+  description = "Storage size in GB for LLM server"
   type        = number
   default     = 200
 }
@@ -48,6 +48,40 @@ variable "backup_time" {
   description = "Backup time (HHMM format)"
   type        = string
   default     = "0200"
+}
+
+# ============================================
+# Network Architecture Variables
+# ============================================
+
+variable "private_network_cidr" {
+  description = "CIDR block for the private network (e.g., 172.30.0.0/24)"
+  type        = string
+  default     = "172.30.0.0/24"
+}
+
+variable "bastion_private_ip" {
+  description = "Private IP address for the bastion server"
+  type        = string
+  default     = "172.30.0.10"
+}
+
+variable "llm_server_private_ip" {
+  description = "Private IP address for the LLM server"
+  type        = string
+  default     = "172.30.0.20"
+}
+
+variable "bastion_plan" {
+  description = "Bastion server plan (small, no GPU needed)"
+  type        = string
+  default     = "1xCPU-1GB"
+}
+
+variable "loadbalancer_plan" {
+  description = "Load balancer plan (development, production-small)"
+  type        = string
+  default     = "development"
 }
 
 # ============================================
@@ -150,12 +184,6 @@ variable "acme_email" {
   default     = ""
 }
 
-variable "floating_ip" {
-  description = "Floating IP address for netplan configuration (leave empty if none)"
-  type        = string
-  default     = ""
-}
-
 variable "inactivity_timeout" {
   description = "Inactivity timeout in seconds before auto-shutdown (default 1 hour)"
   type        = number
@@ -166,34 +194,4 @@ variable "allowed_ips" {
   description = "Comma-separated list of allowed IP addresses/ranges (CIDR notation) for Caddy whitelist"
   type        = string
   default     = ""
-}
-
-variable "wireguard_peers" {
-  description = "Number of Wireguard peer configurations to generate"
-  type        = number
-  default     = 1
-}
-
-variable "wireguard_serverurl" {
-  description = "Wireguard server URL (use floating_ip or domain)"
-  type        = string
-  default     = "auto"
-}
-
-variable "wireguard_serverport" {
-  description = "Wireguard server UDP port"
-  type        = number
-  default     = 51820
-}
-
-variable "wireguard_peerdns" {
-  description = "DNS server for Wireguard clients"
-  type        = string
-  default     = "1.1.1.1"
-}
-
-variable "wireguard_internal_subnet" {
-  description = "Internal VPN subnet"
-  type        = string
-  default     = "10.13.13.0"
 }

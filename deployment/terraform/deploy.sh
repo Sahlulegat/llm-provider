@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# ============================================
+# LLM Provider - Terraform Deploy Script
+# Private Network Architecture with Bastion + Load Balancer
+# ============================================
+
 # Load UpCloud credentials from root .env
 if [ -f "../../.env" ]; then
     set -a
@@ -16,7 +21,7 @@ fi
 if [ -z "$UPCLOUD_USERNAME" ] || [ -z "$UPCLOUD_PASSWORD" ]; then
     echo "❌ Error: UPCLOUD_USERNAME and UPCLOUD_PASSWORD must be set"
     echo ""
-    echo "Add them to /opt/projects/llm-provider/.env:"
+    echo "Add them to your root .env file:"
     echo "  UPCLOUD_USERNAME=your-api-username"
     echo "  UPCLOUD_PASSWORD=your-api-password"
     exit 1
@@ -25,89 +30,89 @@ fi
 echo "✓ UpCloud credentials configured"
 echo ""
 
-# Function to check and import floating IP if needed
-check_floating_ip_import() {
-    # Check if floating IP is configured
-    if [ -z "$TF_VAR_floating_ip" ] || [ "$TF_VAR_floating_ip" == "" ]; then
-        echo "ℹ No floating IP configured (TF_VAR_floating_ip is empty)"
-        return 0
-    fi
-
-    echo "✓ Floating IP configured: $TF_VAR_floating_ip"
-
-    # Check if terraform state exists
-    if [ ! -f "terraform.tfstate" ] && [ ! -f ".terraform/terraform.tfstate" ]; then
-        echo "⚠ No terraform state found. Run './deploy.sh init' first."
-        return 0
-    fi
-
-    # Check if floating IP is already in state
-    if terraform state list 2>/dev/null | grep -q "upcloud_floating_ip_address.main"; then
-        echo "✓ Floating IP already imported in Terraform state"
-        return 0
-    fi
-
-    # Import floating IP
+# Show architecture info
+show_architecture() {
     echo ""
-    echo "📥 Importing floating IP $TF_VAR_floating_ip into Terraform state..."
-    echo "   This is required before first apply to attach the IP to the server."
+    echo "============================================"
+    echo "Network Architecture"
+    echo "============================================"
     echo ""
-
-    if terraform import "upcloud_floating_ip_address.main[0]" "$TF_VAR_floating_ip"; then
-        echo "✓ Floating IP successfully imported"
-        echo ""
-    else
-        echo "❌ Failed to import floating IP"
-        echo "   Make sure the IP exists in UpCloud and is not already managed by another Terraform state."
-        echo ""
-        exit 1
-    fi
+    echo "  Internet"
+    echo "     │"
+    echo "     ├──→ Load Balancer (HTTP/HTTPS) ──→ [Private Network] ──→ LLM Server"
+    echo "     │"
+    echo "     └──→ Bastion (SSH only) ──→ [Private Network] ──→ LLM Server"
+    echo ""
+    echo "Security:"
+    echo "  - LLM Server: No public IP, only accessible via private network"
+    echo "  - Bastion: SSH only (port 22), with fail2ban protection"
+    echo "  - Load Balancer: HTTP (80) and HTTPS (443) only"
+    echo "  - All other traffic blocked by firewall"
+    echo ""
+    echo "============================================"
+    echo ""
 }
 
 # Run terraform command
 case "$1" in
     init)
+        show_architecture
         terraform init
         ;;
     plan)
-        check_floating_ip_import
+        show_architecture
         terraform plan
         ;;
     apply)
-        check_floating_ip_import
+        show_architecture
         terraform apply
         ;;
     destroy)
+        show_architecture
+        echo "⚠️  Destroying infrastructure..."
         echo ""
-        echo "⚠️  Destroying infrastructure (keeping floating IP)..."
-        echo ""
-
-        # Remove floating IP from Terraform state (prevents destroy attempt)
-        if [ -n "$TF_VAR_floating_ip" ] && [ "$TF_VAR_floating_ip" != "" ]; then
-            if terraform state list 2>/dev/null | grep -q "upcloud_floating_ip_address.main"; then
-                echo "📤 Removing floating IP from Terraform state..."
-                terraform state rm 'upcloud_floating_ip_address.main[0]'
-                echo "✓ Floating IP $TF_VAR_floating_ip removed from state (will be re-imported on next apply)"
-                echo ""
-            fi
-        fi
-
-        # Now destroy all remaining resources
         terraform destroy
-
         echo ""
         echo "✅ Infrastructure destroyed"
-        if [ -n "$TF_VAR_floating_ip" ] && [ "$TF_VAR_floating_ip" != "" ]; then
-            echo "   Floating IP $TF_VAR_floating_ip preserved in UpCloud"
-            echo "   (Will be automatically re-imported on next apply)"
-        fi
         echo "   To recreate: ./deploy.sh apply"
         ;;
     output)
         terraform output
         ;;
+    ssh-bastion)
+        # Quick SSH to bastion
+        BASTION_IP=$(terraform output -raw bastion_public_ip 2>/dev/null)
+        if [ -n "$BASTION_IP" ]; then
+            echo "Connecting to bastion at $BASTION_IP..."
+            ssh llmadmin@$BASTION_IP
+        else
+            echo "❌ Could not get bastion IP. Run './deploy.sh output' to check."
+            exit 1
+        fi
+        ;;
+    ssh-llm)
+        # Quick SSH to LLM server via bastion
+        BASTION_IP=$(terraform output -raw bastion_public_ip 2>/dev/null)
+        LLM_IP=$(terraform output -raw llm_server_private_ip 2>/dev/null)
+        if [ -n "$BASTION_IP" ] && [ -n "$LLM_IP" ]; then
+            echo "Connecting to LLM server at $LLM_IP via bastion $BASTION_IP..."
+            ssh -J llmadmin@$BASTION_IP llmadmin@$LLM_IP
+        else
+            echo "❌ Could not get server IPs. Run './deploy.sh output' to check."
+            exit 1
+        fi
+        ;;
     *)
-        echo "Usage: ./deploy.sh {init|plan|apply|destroy|output}"
+        echo "Usage: ./deploy.sh {init|plan|apply|destroy|output|ssh-bastion|ssh-llm}"
+        echo ""
+        echo "Commands:"
+        echo "  init        Initialize Terraform"
+        echo "  plan        Show execution plan"
+        echo "  apply       Create/update infrastructure"
+        echo "  destroy     Destroy infrastructure"
+        echo "  output      Show infrastructure details"
+        echo "  ssh-bastion Connect to bastion server"
+        echo "  ssh-llm     Connect to LLM server via bastion"
         exit 1
         ;;
 esac

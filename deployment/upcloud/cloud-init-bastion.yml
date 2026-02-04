@@ -1,0 +1,85 @@
+#cloud-config
+# UpCloud Cloud-Init - Bastion / Jump Server
+# This is a minimal server for SSH access to the private network
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - htop
+  - net-tools
+  - tmux
+
+runcmd:
+  # Configure llmadmin user (created by UpCloud login block)
+  - usermod -aG sudo llmadmin || true
+  - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
+  - chmod 440 /etc/sudoers.d/llmadmin
+
+  # Configure SSH to allow agent forwarding (for jumping to LLM server)
+  - |
+    cat >> /etc/ssh/sshd_config << 'EOF'
+    # Allow agent forwarding for jump access
+    AllowAgentForwarding yes
+    AllowTcpForwarding yes
+    EOF
+    systemctl reload sshd
+
+  # Create SSH config for easy access to LLM server
+  - |
+    mkdir -p /home/llmadmin/.ssh
+    cat > /home/llmadmin/.ssh/config << EOF
+    Host llm-server
+        HostName ${llm_server_private_ip}
+        User llmadmin
+        ForwardAgent yes
+        StrictHostKeyChecking no
+    EOF
+    chown -R llmadmin:llmadmin /home/llmadmin/.ssh
+    chmod 600 /home/llmadmin/.ssh/config
+
+  # Harden SSH - disable password auth, root login
+  - |
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+    sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+    systemctl reload sshd
+
+  # Install fail2ban for SSH protection
+  - apt-get install -y fail2ban
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+  # Log completion
+  - echo "Bastion server setup completed at $(date)" >> /var/log/cloud-init-output.log
+
+write_files:
+  - path: /etc/motd
+    content: |
+      ============================================
+      LLM Provider - Bastion Server
+      ============================================
+
+      This is a jump server for accessing the LLM infrastructure.
+
+      Quick access to LLM server:
+        ssh llm-server
+
+      Or use ProxyJump from your local machine:
+        ssh -J llmadmin@<bastion-ip> llmadmin@${llm_server_private_ip}
+
+      ============================================
+    owner: root:root
+    permissions: '0644'
+
+final_message: |
+  ============================================
+  Bastion Server Setup Complete!
+  ============================================
+
+  SSH to LLM server: ssh llm-server
+  LLM Server IP: ${llm_server_private_ip}
+
+  ============================================

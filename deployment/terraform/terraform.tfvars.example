@@ -1,5 +1,10 @@
 # UpCloud LLM Provider Configuration
 # Copy this file to terraform.tfvars and adjust values
+#
+# Architecture: Private Network with Bastion + Load Balancer
+# - LLM Server on private network (no public IP)
+# - Bastion server for SSH access
+# - Load Balancer for HTTP/HTTPS access
 
 # ============================================
 # Infrastructure Configuration
@@ -13,34 +18,58 @@ storage_tier = "maxiops"  # or "hdd" for cheaper but slower
 backup_plan  = "daily"    # or "weekly", "none"
 backup_time  = "0200"     # HHMM format
 
+# SSH public keys for server access (required)
+# ssh_public_keys = ["ssh-rsa AAAA..."]
+
 # ============================================
-# Application Configuration (.env variables)
-# These variables can be manages through the .env (see .env.tf.example)
-# In this case the block below should be deleted when creating tfvars file
+# Network Architecture Configuration
 # ============================================
 
-# Ollama
+# Private network CIDR (default: 172.30.0.0/24)
+private_network_cidr = "172.30.0.0/24"
+
+# Static IPs within the private network
+bastion_private_ip    = "172.30.0.10"
+llm_server_private_ip = "172.30.0.20"
+
+# Bastion server plan (small, no GPU needed)
+bastion_plan = "1xCPU-1GB"
+
+# Load balancer plan: "development" or "production-small"
+loadbalancer_plan = "development"
+
+# ============================================
+# Application Configuration
+# ============================================
+
+# Ollama settings
 ollama_port              = 11434
 ollama_origins           = "*"
-ollama_keep_alive        = "-1"  # -1 for indefinitely, or "30m"
+ollama_keep_alive        = "-1"  # -1 = forever, or "30m", "1h", etc.
 ollama_max_loaded_models = 1
 ollama_load_timeout      = "10m"
 
-# Model
+# Model settings
 model_name          = "gpt-oss:120b"
 model_pull_on_start = true
 
-# API
+# API settings
 api_timeout = 600
 log_level   = "info"
 
-# Open WebUI
-webui_port          = 3000
-webui_name          = "LLM Chat"
-enable_signup       = true   # Set to false after creating admin
-default_user_role   = "pending"
-webui_auth          = true
+# WebUI settings
+webui_port        = 3000
+webui_name        = "LLM Chat"
+enable_signup     = true
+default_user_role = "pending"  # pending, user, admin
+webui_auth        = true
 
-# HTTPS (leave empty for localhost access)
-domain_name = ""  # e.g., "chat.example.com"
-acme_email  = ""  # e.g., "admin@example.com"
+# HTTPS/Domain settings (optional)
+# domain_name = "llm.example.com"
+# acme_email  = "admin@example.com"
+
+# IP whitelist for Caddy (optional, comma-separated CIDR)
+# allowed_ips = "192.168.1.0/24,10.0.0.0/8"
+
+# Auto-shutdown after inactivity (seconds, default 1 hour)
+inactivity_timeout = 3600

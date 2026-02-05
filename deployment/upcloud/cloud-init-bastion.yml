@@ -17,6 +17,16 @@ runcmd:
   - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
   - chmod 440 /etc/sudoers.d/llmadmin
 
+  # Configure DNS for private network interface
+  - mkdir -p /etc/systemd/resolved.conf.d
+  - |
+    cat > /etc/systemd/resolved.conf.d/dns.conf << 'EOF'
+    [Resolve]
+    DNS=8.8.8.8 1.1.1.1
+    FallbackDNS=8.8.4.4 1.0.0.1
+    EOF
+  - systemctl restart systemd-resolved
+
   # Configure SSH to allow agent forwarding (for jumping to LLM server)
   - |
     cat >> /etc/ssh/sshd_config << 'EOF'
@@ -39,18 +49,83 @@ runcmd:
     chown -R llmadmin:llmadmin /home/llmadmin/.ssh
     chmod 600 /home/llmadmin/.ssh/config
 
-  # Harden SSH - disable password auth, root login
+  # Harden SSH - disable password auth, root login + rate limiting
   - |
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
     sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
     sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+    # Rate limiting SSH connections
+    cat >> /etc/ssh/sshd_config << 'SSHEOF'
+    # Rate limiting - protect against brute force
+    MaxStartups 3:50:10
+    MaxAuthTries 3
+    LoginGraceTime 20
+    ClientAliveInterval 300
+    ClientAliveCountMax 2
+    SSHEOF
     systemctl reload sshd
 
-  # Install fail2ban for SSH protection
+  # Install fail2ban for SSH protection with aggressive config
   - apt-get install -y fail2ban
+  - |
+    cat > /etc/fail2ban/jail.local << 'F2BEOF'
+    [DEFAULT]
+    bantime = 1h
+    findtime = 10m
+    maxretry = 3
+    banaction = iptables-multiport
+
+    [sshd]
+    enabled = true
+    port = ssh
+    filter = sshd
+    logpath = /var/log/auth.log
+    maxretry = 3
+    findtime = 5m
+    bantime = 24h
+
+    # Recidive jail - ban repeat offenders for longer
+    [recidive]
+    enabled = true
+    filter = recidive
+    logpath = /var/log/fail2ban.log
+    bantime = 1w
+    findtime = 1d
+    maxretry = 3
+    F2BEOF
   - systemctl enable fail2ban
-  - systemctl start fail2ban
+  - systemctl restart fail2ban
+
+  # Aggressive logrotate for auth.log (prevent disk filling)
+  - |
+    cat > /etc/logrotate.d/auth-aggressive << 'LOGEOF'
+    /var/log/auth.log {
+        hourly
+        rotate 24
+        size 10M
+        compress
+        delaycompress
+        missingok
+        notifempty
+        create 640 root adm
+        postrotate
+            /usr/lib/rsyslog/rsyslog-rotate
+        endscript
+    }
+    LOGEOF
+  - |
+    # Add hourly cron for logrotate
+    echo "0 * * * * root /usr/sbin/logrotate /etc/logrotate.d/auth-aggressive" > /etc/cron.d/logrotate-hourly
+
+  # IPtables rate limiting for SSH (defense in depth before fail2ban)
+  - |
+    apt-get install -y iptables-persistent
+    # Rate limit new SSH connections: 4 per minute per IP
+    iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set --name SSH
+    iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --name SSH -j DROP
+    # Save rules
+    netfilter-persistent save
 
   # Log completion
   - echo "Bastion server setup completed at $(date)" >> /var/log/cloud-init-output.log

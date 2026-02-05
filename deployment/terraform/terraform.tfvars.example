@@ -32,8 +32,8 @@ private_network_cidr = "172.30.0.0/24"
 bastion_private_ip    = "172.30.0.10"
 llm_server_private_ip = "172.30.0.20"
 
-# Bastion server plan (small, no GPU needed)
-bastion_plan = "1xCPU-1GB"
+# Bastion server plan (2GB recommended to handle SSH brute-force attacks)
+bastion_plan = "1xCPU-2GB"
 
 # Load balancer plan: "development" or "production-small"
 loadbalancer_plan = "development"

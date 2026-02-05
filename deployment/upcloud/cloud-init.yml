@@ -22,6 +22,19 @@ runcmd:
   - echo "llmadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/llmadmin
   - chmod 440 /etc/sudoers.d/llmadmin
 
+  # Configure DNS (UpCloud private network doesn't provide DNS via DHCP)
+  - mkdir -p /etc/systemd/resolved.conf.d
+  - |
+    cat > /etc/systemd/resolved.conf.d/dns.conf << 'EOF'
+    [Resolve]
+    DNS=8.8.8.8 1.1.1.1
+    FallbackDNS=8.8.4.4 1.0.0.1
+    EOF
+  - systemctl restart systemd-resolved
+  - echo "DNS configured (8.8.8.8, 1.1.1.1)" >> /var/log/cloud-init-output.log
+
+  # Note: Internet access provided by UpCloud Managed NAT Gateway (via DHCP default route)
+
   # Upgrade packages except nvidia drivers (doesnt work otherwise)
   - apt-mark hold "nvidia*" "libnvidia*"
   - apt-get upgrade -y
@@ -78,9 +91,6 @@ runcmd:
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
     ALLOWED_IPS=${allowed_ips}
-    # Network architecture info
-    PRIVATE_NETWORK_CIDR=${private_network_cidr}
-    BASTION_IP=${bastion_private_ip}
     EOF
 
   # Set permissions
@@ -134,8 +144,9 @@ runcmd:
     cat > /etc/systemd/system/llm-monitor-inactivity.service << EOFSERVICE
     [Unit]
     Description=Monitor LLM API inactivity for auto-shutdown
-    After=network.target llm-provider.service
-    Requires=llm-provider.service
+    After=network.target
+    # Wants instead of Requires: monitor can run even if main service has issues
+    Wants=llm-provider.service
 
     [Service]
     Type=oneshot

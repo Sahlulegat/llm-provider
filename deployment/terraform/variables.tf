@@ -73,9 +73,9 @@ variable "llm_server_private_ip" {
 }
 
 variable "bastion_plan" {
-  description = "Bastion server plan (small, no GPU needed)"
+  description = "Bastion server plan (small, no GPU needed - 2GB recommended for handling SSH brute-force)"
   type        = string
-  default     = "1xCPU-1GB"
+  default     = "1xCPU-2GB"
 }
 
 variable "loadbalancer_plan" {

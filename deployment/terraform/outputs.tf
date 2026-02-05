@@ -12,6 +12,16 @@ output "private_network_cidr" {
   value       = var.private_network_cidr
 }
 
+output "router_id" {
+  description = "Router UUID"
+  value       = upcloud_router.main.id
+}
+
+output "nat_gateway_id" {
+  description = "NAT Gateway UUID (provides internet access to private network)"
+  value       = upcloud_gateway.nat.id
+}
+
 # ============================================
 # Bastion Server Outputs
 # ============================================

@@ -10,6 +10,33 @@ terraform {
 provider "upcloud" {}
 
 # ============================================
+# Router & NAT Gateway (UpCloud Managed)
+# ============================================
+
+resource "upcloud_router" "main" {
+  name = "${var.hostname}-router"
+
+  # UpCloud NAT Gateway adds static routes automatically
+  # Note: If Terraform tries to remove routes on subsequent applies,
+  # you may need to add: lifecycle { ignore_changes = [static_routes] }
+  # depending on your provider version
+}
+
+resource "upcloud_gateway" "nat" {
+  name     = "${var.hostname}-nat-gateway"
+  zone     = var.zone
+  features = ["nat"]
+
+  router {
+    id = upcloud_router.main.id
+  }
+
+  labels = {
+    managed-by = "terraform"
+  }
+}
+
+# ============================================
 # Private Network (SDN)
 # ============================================
 
@@ -20,10 +47,13 @@ resource "upcloud_network" "private" {
   ip_network {
     address            = var.private_network_cidr
     dhcp               = true
-    dhcp_default_route = false
+    dhcp_default_route = true  # Gateway provides default route
     family             = "IPv4"
     gateway            = cidrhost(var.private_network_cidr, 1)
   }
+
+  # Attach network to router for NAT gateway
+  router = upcloud_router.main.id
 }
 
 # ============================================
@@ -73,10 +103,11 @@ resource "upcloud_server" "bastion" {
   }
 }
 
-# Bastion firewall - only SSH from anywhere
+# Bastion firewall - SSH only (NAT handled by UpCloud managed gateway)
 resource "upcloud_firewall_rules" "bastion" {
   server_id = upcloud_server.bastion.id
 
+  # Allow SSH from anywhere
   firewall_rule {
     action                 = "accept"
     comment                = "Allow SSH"
@@ -87,7 +118,7 @@ resource "upcloud_firewall_rules" "bastion" {
     protocol               = "tcp"
   }
 
-  # Drop all other incoming traffic
+  # Drop all other incoming traffic from internet
   firewall_rule {
     action    = "drop"
     comment   = "Drop all other incoming TCP (IPv4)"
@@ -114,7 +145,7 @@ resource "upcloud_server" "main" {
   title    = var.hostname
   zone     = var.zone
   plan     = var.plan
-  firewall = true
+  firewall = false  # Disabled - server is on private network only, no public IP
   metadata = true
 
   login {
@@ -124,26 +155,24 @@ resource "upcloud_server" "main" {
   }
 
   user_data = templatefile("${path.module}/../upcloud/cloud-init.yml", {
-    ollama_port               = var.ollama_port
-    ollama_origins            = var.ollama_origins
-    ollama_keep_alive         = var.ollama_keep_alive
-    ollama_max_loaded_models  = var.ollama_max_loaded_models
-    ollama_load_timeout       = var.ollama_load_timeout
-    model_name                = var.model_name
-    model_pull_on_start       = var.model_pull_on_start
-    api_timeout               = var.api_timeout
-    log_level                 = var.log_level
-    webui_port                = var.webui_port
-    webui_name                = var.webui_name
-    enable_signup             = var.enable_signup
-    default_user_role         = var.default_user_role
-    webui_auth                = var.webui_auth
-    domain_name               = var.domain_name
-    acme_email                = var.acme_email
-    inactivity_timeout        = var.inactivity_timeout
-    allowed_ips               = var.allowed_ips
-    bastion_private_ip        = var.bastion_private_ip
-    private_network_cidr      = var.private_network_cidr
+    ollama_port              = var.ollama_port
+    ollama_origins           = var.ollama_origins
+    ollama_keep_alive        = var.ollama_keep_alive
+    ollama_max_loaded_models = var.ollama_max_loaded_models
+    ollama_load_timeout      = var.ollama_load_timeout
+    model_name               = var.model_name
+    model_pull_on_start      = var.model_pull_on_start
+    api_timeout              = var.api_timeout
+    log_level                = var.log_level
+    webui_port               = var.webui_port
+    webui_name               = var.webui_name
+    enable_signup            = var.enable_signup
+    default_user_role        = var.default_user_role
+    webui_auth               = var.webui_auth
+    domain_name              = var.domain_name
+    acme_email               = var.acme_email
+    inactivity_timeout       = var.inactivity_timeout
+    allowed_ips              = var.allowed_ips
   })
 
   template {
@@ -169,85 +198,16 @@ resource "upcloud_server" "main" {
     time = var.backup_time
   }
 
-  depends_on = [upcloud_network.private]
+  # Wait for NAT gateway to be ready before creating server
+  # This ensures internet access is available during cloud-init
+  depends_on = [upcloud_network.private, upcloud_gateway.nat]
 }
 
-# LLM Server firewall - only allow traffic from private network
-resource "upcloud_firewall_rules" "main" {
-  server_id = upcloud_server.main.id
-
-  # Allow SSH from bastion (private network)
-  firewall_rule {
-    action                 = "accept"
-    comment                = "Allow SSH from private network"
-    destination_port_end   = "22"
-    destination_port_start = "22"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-    source_address_end     = cidrhost(var.private_network_cidr, 254)
-    source_address_start   = cidrhost(var.private_network_cidr, 1)
-  }
-
-  # Allow HTTP from load balancer (private network)
-  firewall_rule {
-    action                 = "accept"
-    comment                = "Allow HTTP from load balancer"
-    destination_port_end   = "80"
-    destination_port_start = "80"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-    source_address_end     = cidrhost(var.private_network_cidr, 254)
-    source_address_start   = cidrhost(var.private_network_cidr, 1)
-  }
-
-  # Allow HTTPS from load balancer (private network)
-  firewall_rule {
-    action                 = "accept"
-    comment                = "Allow HTTPS from load balancer"
-    destination_port_end   = "443"
-    destination_port_start = "443"
-    direction              = "in"
-    family                 = "IPv4"
-    protocol               = "tcp"
-    source_address_end     = cidrhost(var.private_network_cidr, 254)
-    source_address_start   = cidrhost(var.private_network_cidr, 1)
-  }
-
-  # Drop all other incoming traffic
-  firewall_rule {
-    action    = "drop"
-    comment   = "Drop all other incoming TCP (IPv4)"
-    direction = "in"
-    family    = "IPv4"
-    protocol  = "tcp"
-  }
-
-  firewall_rule {
-    action    = "drop"
-    comment   = "Drop all other incoming UDP (IPv4)"
-    direction = "in"
-    family    = "IPv4"
-    protocol  = "udp"
-  }
-
-  firewall_rule {
-    action    = "drop"
-    comment   = "Drop all other incoming TCP (IPv6)"
-    direction = "in"
-    family    = "IPv6"
-    protocol  = "tcp"
-  }
-
-  firewall_rule {
-    action    = "drop"
-    comment   = "Drop all other incoming UDP (IPv6)"
-    direction = "in"
-    family    = "IPv6"
-    protocol  = "udp"
-  }
-}
+# LLM Server firewall is DISABLED (firewall = false)
+# The server is on a private network with no public IP, so:
+# - Inbound traffic only comes from bastion (SSH) or load balancer (HTTP/S)
+# - Internet access is provided by UpCloud Managed NAT Gateway
+# Security is provided by network isolation, not firewall rules
 
 # ============================================
 # Load Balancer

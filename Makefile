@@ -80,7 +80,7 @@ monitor-test:
 	@echo "=== Testing Inactivity Detection (dry-run) ==="
 	@echo "This will check inactivity but NOT shutdown the server"
 	@echo ""
-	@bash ./scripts/monitor-inactivity.sh || echo "Run this command on the server: sudo bash /opt/llm-provider/scripts/monitor-inactivity.sh"
+	@sudo bash ./scripts/monitor-inactivity.sh || echo "Run this command on the server: sudo bash /opt/llm-provider/scripts/monitor-inactivity.sh"
 
 monitor-enable:
 	@echo "=== Enabling Auto-Shutdown Monitoring ==="

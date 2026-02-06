@@ -7,8 +7,12 @@ Internet
     │
     ├──→ Load Balancer (HTTP/HTTPS) ──→ [Réseau Privé 172.30.0.0/24] ──→ LLM Server (172.30.0.20)
     │
-    └──→ Bastion (SSH) ──→ [Réseau Privé] ──→ LLM Server
+    ├──→ Bastion (SSH) ──→ [Réseau Privé] ──→ LLM Server
+    │
+    └──← NAT Gateway (UpCloud Managed) ←── [Réseau Privé] ←── LLM Server (accès internet sortant)
 ```
+
+Le **NAT Gateway managé UpCloud** permet au serveur LLM d'accéder à internet (git clone, docker pull, etc.) sans avoir d'IP publique.
 
 ## 1. Accès Web (WebUI / API)
 

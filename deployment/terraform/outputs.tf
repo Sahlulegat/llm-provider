@@ -79,12 +79,9 @@ output "loadbalancer_dns_name" {
   value       = upcloud_loadbalancer.main.dns_name
 }
 
-output "loadbalancer_frontends" {
-  description = "Load balancer frontend IPs"
-  value = {
-    http  = "Port 80 via ${upcloud_loadbalancer.main.dns_name}"
-    https = "Port 443 via ${upcloud_loadbalancer.main.dns_name}"
-  }
+output "loadbalancer_frontend" {
+  description = "Load balancer HTTPS frontend"
+  value       = "https://${upcloud_loadbalancer.main.dns_name}"
 }
 
 # ============================================
@@ -128,7 +125,7 @@ output "ssh_config_entry" {
 
 output "webui_url" {
   description = "Open WebUI URL (via load balancer)"
-  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${upcloud_loadbalancer.main.dns_name}"
+  value       = "https://${var.domain_name}"
 }
 
 # ============================================

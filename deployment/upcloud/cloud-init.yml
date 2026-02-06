@@ -91,6 +91,7 @@ runcmd:
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
     ALLOWED_IPS=${allowed_ips}
+    CADDY_API_KEY=${caddy_api_key}
     EOF
 
   # Set permissions

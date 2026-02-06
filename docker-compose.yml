@@ -135,6 +135,7 @@ services:
       - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
       - ACME_EMAIL=${ACME_EMAIL:-}
       - ALLOWED_IPS=${ALLOWED_IPS:-0.0.0.0/0}
+      - CADDY_API_KEY=${CADDY_API_KEY}
 
 networks:
   llm-network:

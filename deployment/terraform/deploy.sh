@@ -6,6 +6,8 @@ set -e
 # Private Network Architecture with Bastion + Load Balancer
 # ============================================
 
+CERT_RESOURCE="upcloud_loadbalancer_dynamic_certificate_bundle.main"
+
 # Load UpCloud credentials from root .env
 if [ -f "../../.env" ]; then
     set -a
@@ -30,7 +32,6 @@ fi
 echo "✓ UpCloud credentials configured"
 echo ""
 
-# Show architecture info
 show_architecture() {
     echo ""
     echo "============================================"
@@ -39,21 +40,43 @@ show_architecture() {
     echo ""
     echo "  Internet"
     echo "     │"
-    echo "     ├──→ Load Balancer (HTTP/HTTPS) ──→ [Private Network] ──→ LLM Server"
-    echo "     │"
-    echo "     └──→ Bastion (SSH only) ──→ [Private Network] ──→ LLM Server"
+    echo "     └──→ Load Balancer (HTTPS:443) ──→ [Private Network] ──→ LLM Server"
+    echo "            │"
+    echo "            └── TLS termination (lb-llm-certs)"
+    echo ""
+    echo "     Bastion (SSH:22) ──→ [Private Network] ──→ LLM Server"
     echo ""
     echo "Security:"
-    echo "  - LLM Server: No public IP, only accessible via private network"
-    echo "  - Bastion: SSH only (port 22), with fail2ban protection"
-    echo "  - Load Balancer: HTTP (80) and HTTPS (443) only"
-    echo "  - All other traffic blocked by firewall"
+    echo "  - LLM Server: No public IP, private network only"
+    echo "  - Bastion: SSH only (port 22), fail2ban protection"
+    echo "  - Load Balancer: HTTPS only, TLS certificate"
+    echo "  - Caddy: API key authentication (X-API-Key header)"
     echo ""
     echo "============================================"
     echo ""
 }
 
-# Run terraform command
+import_certificate() {
+    CERT_UUID="${TF_VAR_lb_certificate_uuid:-0a2766b9-d622-4483-ba96-e020a32ba45a}"
+
+    if terraform state list 2>/dev/null | grep -q "$CERT_RESOURCE"; then
+        echo "✓ Certificate already in state"
+    else
+        echo "→ Importing existing certificate $CERT_UUID..."
+        terraform import "$CERT_RESOURCE" "$CERT_UUID" || {
+            echo "⚠ Import failed (certificate may not exist yet or already managed)"
+        }
+    fi
+}
+
+remove_certificate_from_state() {
+    if terraform state list 2>/dev/null | grep -q "$CERT_RESOURCE"; then
+        echo "→ Removing certificate from state (preserving in UpCloud)..."
+        terraform state rm "$CERT_RESOURCE"
+        echo "✓ Certificate removed from state (will persist in UpCloud)"
+    fi
+}
+
 case "$1" in
     init)
         show_architecture
@@ -61,26 +84,28 @@ case "$1" in
         ;;
     plan)
         show_architecture
+        import_certificate
         terraform plan
         ;;
     apply)
         show_architecture
+        import_certificate
         terraform apply
         ;;
     destroy)
         show_architecture
         echo "⚠️  Destroying infrastructure..."
         echo ""
+        remove_certificate_from_state
         terraform destroy
         echo ""
-        echo "✅ Infrastructure destroyed"
+        echo "✅ Infrastructure destroyed (certificate preserved)"
         echo "   To recreate: ./deploy.sh apply"
         ;;
     output)
         terraform output
         ;;
     ssh-bastion)
-        # Quick SSH to bastion
         BASTION_IP=$(terraform output -raw bastion_public_ip 2>/dev/null)
         if [ -n "$BASTION_IP" ]; then
             echo "Connecting to bastion at $BASTION_IP..."
@@ -91,7 +116,6 @@ case "$1" in
         fi
         ;;
     ssh-llm)
-        # Quick SSH to LLM server via bastion
         BASTION_IP=$(terraform output -raw bastion_public_ip 2>/dev/null)
         LLM_IP=$(terraform output -raw llm_server_private_ip 2>/dev/null)
         if [ -n "$BASTION_IP" ] && [ -n "$LLM_IP" ]; then
@@ -102,17 +126,25 @@ case "$1" in
             exit 1
         fi
         ;;
+    state-list)
+        terraform state list
+        ;;
+    import-cert)
+        import_certificate
+        ;;
     *)
-        echo "Usage: ./deploy.sh {init|plan|apply|destroy|output|ssh-bastion|ssh-llm}"
+        echo "Usage: ./deploy.sh {init|plan|apply|destroy|output|ssh-bastion|ssh-llm|state-list|import-cert}"
         echo ""
         echo "Commands:"
         echo "  init        Initialize Terraform"
-        echo "  plan        Show execution plan"
-        echo "  apply       Create/update infrastructure"
-        echo "  destroy     Destroy infrastructure"
+        echo "  plan        Show execution plan (imports certificate if needed)"
+        echo "  apply       Create/update infrastructure (imports certificate if needed)"
+        echo "  destroy     Destroy infrastructure (preserves certificate)"
         echo "  output      Show infrastructure details"
         echo "  ssh-bastion Connect to bastion server"
         echo "  ssh-llm     Connect to LLM server via bastion"
+        echo "  state-list  List resources in Terraform state"
+        echo "  import-cert Manually import the certificate"
         exit 1
         ;;
 esac

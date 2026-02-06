@@ -2,7 +2,7 @@ terraform {
   required_providers {
     upcloud = {
       source  = "UpCloudLtd/upcloud"
-      version = "~> 2.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -173,6 +173,7 @@ resource "upcloud_server" "main" {
     acme_email               = var.acme_email
     inactivity_timeout       = var.inactivity_timeout
     allowed_ips              = var.allowed_ips
+    caddy_api_key            = var.caddy_api_key
   })
 
   template {
@@ -231,59 +232,13 @@ resource "upcloud_loadbalancer" "main" {
     family  = "IPv4"
     network = upcloud_network.private.id
   }
-
 }
 
-# Frontend - HTTPS (port 443)
-resource "upcloud_loadbalancer_frontend" "https" {
-  loadbalancer         = upcloud_loadbalancer.main.id
-  name                 = "https-frontend"
-  mode                 = "tcp"
-  port                 = 443
-  default_backend_name = upcloud_loadbalancer_backend.https.name
-
-  networks {
-    name = "Public"
-  }
-}
-
-# Frontend - HTTP (port 80) - redirect to HTTPS or direct access
-resource "upcloud_loadbalancer_frontend" "http" {
-  loadbalancer         = upcloud_loadbalancer.main.id
-  name                 = "http-frontend"
-  mode                 = "tcp"
-  port                 = 80
-  default_backend_name = upcloud_loadbalancer_backend.http.name
-
-  networks {
-    name = "Public"
-  }
-}
-
-# Backend - HTTPS
-resource "upcloud_loadbalancer_backend" "https" {
-  loadbalancer = upcloud_loadbalancer.main.id
-  name         = "https-backend"
-}
-
-# Backend - HTTP
 resource "upcloud_loadbalancer_backend" "http" {
   loadbalancer = upcloud_loadbalancer.main.id
   name         = "http-backend"
 }
 
-# Backend member - LLM server HTTPS
-resource "upcloud_loadbalancer_static_backend_member" "llm_https" {
-  backend      = upcloud_loadbalancer_backend.https.id
-  name         = "llm-server-https"
-  ip           = var.llm_server_private_ip
-  port         = 443
-  weight       = 100
-  max_sessions = 1000
-  enabled      = true
-}
-
-# Backend member - LLM server HTTP
 resource "upcloud_loadbalancer_static_backend_member" "llm_http" {
   backend      = upcloud_loadbalancer_backend.http.id
   name         = "llm-server-http"
@@ -294,9 +249,30 @@ resource "upcloud_loadbalancer_static_backend_member" "llm_http" {
   enabled      = true
 }
 
-# ============================================
-# DNS Configuration
-# ============================================
-#
-# Use load balancer DNS name with CNAME:
-#   llm.yourdomain.com  CNAME  <loadbalancer_dns_name>
+resource "upcloud_loadbalancer_frontend" "https" {
+  loadbalancer         = upcloud_loadbalancer.main.id
+  name                 = "https-frontend"
+  mode                 = "http"
+  port                 = 443
+  default_backend_name = upcloud_loadbalancer_backend.http.name
+
+  networks {
+    name = "Public"
+  }
+}
+
+resource "upcloud_loadbalancer_dynamic_certificate_bundle" "main" {
+  name      = var.lb_certificate_name
+  hostnames = [var.domain_name]
+  key_type  = "rsa"
+
+  lifecycle {
+    ignore_changes = [hostnames, key_type]
+  }
+}
+
+resource "upcloud_loadbalancer_frontend_tls_config" "main" {
+  frontend           = upcloud_loadbalancer_frontend.https.id
+  name               = "tls-config"
+  certificate_bundle = upcloud_loadbalancer_dynamic_certificate_bundle.main.id
+}

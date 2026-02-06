@@ -84,6 +84,25 @@ variable "loadbalancer_plan" {
   default     = "development"
 }
 
+variable "lb_certificate_name" {
+  description = "Name of the dynamic certificate bundle for the load balancer"
+  type        = string
+  default     = "lb-llm-certs"
+}
+
+variable "lb_certificate_uuid" {
+  description = "UUID of the existing dynamic certificate bundle (for import)"
+  type        = string
+  default     = "0a2766b9-d622-4483-ba96-e020a32ba45a"
+}
+
+variable "caddy_api_key" {
+  description = "API key for Caddy authentication (all routes)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # ============================================
 # Application Variables (.env)
 # ============================================

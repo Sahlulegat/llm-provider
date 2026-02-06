@@ -1,78 +1,71 @@
-# Caddyfile - HTTPS avec certificat auto-signé via VPN
-# Accès uniquement via VPN - Ports 80/443 fermés dans le firewall UpCloud
-
-# Block global - Désactiver ACME/Let's Encrypt
 {
-	# Pas d'email ACME
+    admin off
+    auto_https off
 }
 
-# Open WebUI - Interface principale
-{$DOMAIN_NAME:localhost} {
-	# Certificat auto-signé généré par Caddy
-	tls internal
-
-	log {
-		output file /data/access.log
-		format json
-	}
-
-	reverse_proxy open-webui:8080
-
-	header {
-		-Server
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "SAMEORIGIN"
-		X-XSS-Protection "1; mode=block"
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-	}
+(auth) {
+    @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
+    respond @unauthorized "Unauthorized" 401
 }
 
-# API Ollama
-api.{$DOMAIN_NAME:localhost} {
-	# Certificat auto-signé généré par Caddy
-	tls internal
+http://{$DOMAIN_NAME:localhost} {
+    import auth
 
-	log {
-		output file /data/api-access.log
-		format json
-	}
+    log {
+        output file /data/access.log
+        format json
+    }
 
-	reverse_proxy ollama:11434 {
-		# Timeouts augmentés pour inférences longues (120B model)
-		transport http {
-			dial_timeout 30s
-			read_timeout 600s
-			write_timeout 600s
-		}
-	}
+    reverse_proxy open-webui:8080
 
-	header {
-		-Server
-		X-Content-Type-Options "nosniff"
-	}
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+    }
 }
 
-# API OCR - PaddleOCR-VL
-ocr.{$DOMAIN_NAME:localhost} {
-	# Certificat auto-signé généré par Caddy
-	tls internal
+http://api.{$DOMAIN_NAME:localhost} {
+    import auth
 
-	log {
-		output file /data/ocr-access.log
-		format json
-	}
+    log {
+        output file /data/api-access.log
+        format json
+    }
 
-	reverse_proxy paddleocr-vl-api:8080 {
-		# Timeouts augmentés pour parsing de gros PDFs
-		transport http {
-			dial_timeout 30s
-			read_timeout 300s
-			write_timeout 300s
-		}
-	}
+    reverse_proxy ollama:11434 {
+        transport http {
+            dial_timeout 30s
+            read_timeout 600s
+            write_timeout 600s
+        }
+    }
 
-	header {
-		-Server
-		X-Content-Type-Options "nosniff"
-	}
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+    }
+}
+
+http://ocr.{$DOMAIN_NAME:localhost} {
+    import auth
+
+    log {
+        output file /data/ocr-access.log
+        format json
+    }
+
+    reverse_proxy paddleocr-vl-api:8080 {
+        transport http {
+            dial_timeout 30s
+            read_timeout 300s
+            write_timeout 300s
+        }
+    }
+
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+    }
 }

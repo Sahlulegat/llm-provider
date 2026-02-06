@@ -38,6 +38,13 @@ bastion_plan = "1xCPU-2GB"
 # Load balancer plan: "development" or "production-small"
 loadbalancer_plan = "development"
 
+# Load balancer TLS certificate (existing dynamic certificate in UpCloud)
+lb_certificate_name = "lb-llm-certs"
+lb_certificate_uuid = "0a2766b9-d622-4483-ba96-e020a32ba45a"
+
+# Caddy API key for authentication (required, all routes protected)
+# caddy_api_key = "your-secure-api-key-here"
+
 # ============================================
 # Application Configuration
 # ============================================

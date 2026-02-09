@@ -237,6 +237,11 @@ resource "upcloud_loadbalancer" "main" {
 resource "upcloud_loadbalancer_backend" "http" {
   loadbalancer = upcloud_loadbalancer.main.id
   name         = "http-backend"
+
+  properties {
+    timeout_server = 600
+    timeout_tunnel = 600
+  }
 }
 
 resource "upcloud_loadbalancer_static_backend_member" "llm_http" {

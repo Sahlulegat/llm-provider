@@ -174,6 +174,8 @@ resource "upcloud_server" "main" {
     inactivity_timeout       = var.inactivity_timeout
     allowed_ips              = var.allowed_ips
     caddy_api_key            = var.caddy_api_key
+    crowdsec_bouncer_key     = var.crowdsec_bouncer_key
+    crowdsec_enroll_key      = var.crowdsec_enroll_key
   })
 
   template {

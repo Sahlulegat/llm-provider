@@ -103,6 +103,20 @@ variable "caddy_api_key" {
   default     = ""
 }
 
+variable "crowdsec_bouncer_key" {
+  description = "API key for CrowdSec Caddy bouncer"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "crowdsec_enroll_key" {
+  description = "CrowdSec console enrollment key (from app.crowdsec.net)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # ============================================
 # Application Variables (.env)
 # ============================================

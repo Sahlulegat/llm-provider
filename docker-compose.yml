@@ -92,33 +92,10 @@ services:
 
   # -----------------------------------------------
 
-  wireguard:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: wireguard-vpn
-    restart: unless-stopped
-    network_mode: host
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris
-      - SERVERURL=${WIREGUARD_SERVERURL:-auto}
-      - SERVERPORT=${WIREGUARD_SERVERPORT:-51820}
-      - PEERS=${WIREGUARD_PEERS:-1}
-      - PEERDNS=${WIREGUARD_PEERDNS:-1.1.1.1}
-      - INTERNAL_SUBNET=${WIREGUARD_INTERNAL_SUBNET:-10.13.13.0}
-      - ALLOWEDIPS=0.0.0.0/0
-      - LOG_CONFS=true
-    volumes:
-      - ./data/wireguard:/config
-      - /lib/modules:/lib/modules:ro
-    ports:
-      - "${WIREGUARD_SERVERPORT:-51820}:51820/udp"
-
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
     container_name: caddy-proxy
     restart: unless-stopped
     ports:
@@ -136,6 +113,23 @@ services:
       - ACME_EMAIL=${ACME_EMAIL:-}
       - ALLOWED_IPS=${ALLOWED_IPS:-0.0.0.0/0}
       - CADDY_API_KEY=${CADDY_API_KEY}
+      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    environment:
+      - COLLECTIONS=crowdsecurity/caddy crowdsecurity/http-cve crowdsecurity/whitelist-good-actors
+      - BOUNCER_KEY_caddy=${CROWDSEC_BOUNCER_KEY}
+      - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
+      - ENROLL_INSTANCE_NAME=llm-provider
+    volumes:
+      - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - ./data/caddy:/var/log/caddy:ro
+      - ./data/crowdsec/db:/var/lib/crowdsec/data
+    networks:
+      - llm-network
 
 networks:
   llm-network:

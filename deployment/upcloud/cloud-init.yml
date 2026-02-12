@@ -92,6 +92,8 @@ runcmd:
     ACME_EMAIL=${acme_email}
     ALLOWED_IPS=${allowed_ips}
     CADDY_API_KEY=${caddy_api_key}
+    CROWDSEC_BOUNCER_KEY=${crowdsec_bouncer_key}
+    CROWDSEC_ENROLL_KEY=${crowdsec_enroll_key}
     EOF
 
   # Set permissions

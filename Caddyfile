@@ -1,6 +1,11 @@
 {
     admin off
     auto_https off
+    order crowdsec first
+    crowdsec {
+        api_url http://crowdsec:8080
+        api_key {$CROWDSEC_BOUNCER_KEY}
+    }
 }
 
 (auth) {
@@ -8,7 +13,8 @@
     respond @unauthorized "Unauthorized" 401
 }
 
-http://{$DOMAIN_NAME:localhost} {
+http://ui.{$DOMAIN_NAME:localhost} {
+    crowdsec
     import auth
 
     log {
@@ -27,6 +33,7 @@ http://{$DOMAIN_NAME:localhost} {
 }
 
 http://api.{$DOMAIN_NAME:localhost} {
+    crowdsec
     import auth
 
     log {
@@ -49,6 +56,7 @@ http://api.{$DOMAIN_NAME:localhost} {
 }
 
 http://ocr.{$DOMAIN_NAME:localhost} {
+    crowdsec
     import auth
 
     log {

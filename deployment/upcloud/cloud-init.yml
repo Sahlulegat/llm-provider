@@ -100,6 +100,9 @@ runcmd:
   - chown -R llmadmin:llmadmin /opt/llm-provider
   - chmod 600 /opt/llm-provider/.env
 
+  # Pre-build custom Caddy image (xcaddy compilation takes time)
+  - cd /opt/llm-provider && docker compose build caddy
+
   # Create systemd service
   - |
     cat > /etc/systemd/system/llm-provider.service << 'EOF'

@@ -1,0 +1,10 @@
+type: leaky
+name: custom/api-key-bruteforce
+description: "Ban IPs that generate too many 401 responses (API key bruteforce)"
+filter: evt.Meta.http_status == '401'
+groupby: evt.Meta.source_ip
+capacity: 10
+leakspeed: 1m
+blackhole: 5m
+labels:
+  remediation: true

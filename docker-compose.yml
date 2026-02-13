@@ -125,7 +125,9 @@ services:
       - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
       - ENROLL_INSTANCE_NAME=llm-provider
     volumes:
+      - ./data/crowdsec/config:/etc/crowdsec
       - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - ./crowdsec/scenarios:/etc/crowdsec/scenarios:ro
       - ./data/caddy:/var/log/caddy:ro
       - ./data/crowdsec/db:/var/lib/crowdsec/data
     networks:

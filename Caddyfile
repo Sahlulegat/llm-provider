@@ -6,23 +6,23 @@
         api_url http://crowdsec:8080
         api_key {$CROWDSEC_BOUNCER_KEY}
     }
-}
-
-(auth) {
-    @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
-    respond @unauthorized "Unauthorized" 401
+    servers {
+        trusted_proxies static 172.30.0.0/24
+    }
 }
 
 http://ui.{$DOMAIN_NAME:localhost} {
-    crowdsec
-    import auth
-
     log {
         output file /data/access.log
         format json
     }
 
-    reverse_proxy open-webui:8080
+    route {
+        crowdsec
+        @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
+        respond @unauthorized "Unauthorized" 401
+        reverse_proxy open-webui:8080
+    }
 
     header {
         -Server
@@ -33,19 +33,21 @@ http://ui.{$DOMAIN_NAME:localhost} {
 }
 
 http://api.{$DOMAIN_NAME:localhost} {
-    crowdsec
-    import auth
-
     log {
         output file /data/api-access.log
         format json
     }
 
-    reverse_proxy ollama:11434 {
-        transport http {
-            dial_timeout 30s
-            read_timeout 600s
-            write_timeout 600s
+    route {
+        crowdsec
+        @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
+        respond @unauthorized "Unauthorized" 401
+        reverse_proxy ollama:11434 {
+            transport http {
+                dial_timeout 30s
+                read_timeout 600s
+                write_timeout 600s
+            }
         }
     }
 
@@ -56,19 +58,21 @@ http://api.{$DOMAIN_NAME:localhost} {
 }
 
 http://ocr.{$DOMAIN_NAME:localhost} {
-    crowdsec
-    import auth
-
     log {
         output file /data/ocr-access.log
         format json
     }
 
-    reverse_proxy paddleocr-vl-api:8080 {
-        transport http {
-            dial_timeout 30s
-            read_timeout 300s
-            write_timeout 300s
+    route {
+        crowdsec
+        @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
+        respond @unauthorized "Unauthorized" 401
+        reverse_proxy paddleocr-vl-api:8080 {
+            transport http {
+                dial_timeout 30s
+                read_timeout 300s
+                write_timeout 300s
+            }
         }
     }
 

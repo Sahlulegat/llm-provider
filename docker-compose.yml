@@ -118,7 +118,7 @@ services:
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
-    restart: unless-stopped
+    restart: "no"
     environment:
       - COLLECTIONS=crowdsecurity/caddy crowdsecurity/http-cve crowdsecurity/whitelist-good-actors
       - BOUNCER_KEY_caddy=${CROWDSEC_BOUNCER_KEY}
@@ -127,7 +127,7 @@ services:
     volumes:
       - ./data/crowdsec/config:/etc/crowdsec
       - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
-      - ./crowdsec/scenarios:/etc/crowdsec/scenarios:ro
+      - ./crowdsec/scenarios/api-key-bruteforce-ban.yaml:/etc/crowdsec/scenarios/api-key-bruteforce-ban.yaml:ro
       - ./data/caddy:/var/log/caddy:ro
       - ./data/crowdsec/db:/var/lib/crowdsec/data
     networks:

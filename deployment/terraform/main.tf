@@ -268,6 +268,26 @@ resource "upcloud_loadbalancer_frontend" "https" {
   }
 }
 
+resource "upcloud_loadbalancer_frontend_rule" "forwarded_headers" {
+  frontend = upcloud_loadbalancer_frontend.https.id
+  name     = "set-forwarded-headers"
+  priority = 10
+
+  matchers {
+    num_members_up {
+      backend_name = upcloud_loadbalancer_backend.http.name
+      method       = "equal"
+      value        = 1
+    }
+  }
+
+  actions {
+    set_forwarded_headers {
+      active = true
+    }
+  }
+}
+
 resource "upcloud_loadbalancer_dynamic_certificate_bundle" "main" {
   name      = var.lb_certificate_name
   hostnames = [var.domain_name]

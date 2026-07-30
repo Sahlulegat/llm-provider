@@ -173,6 +173,7 @@ resource "upcloud_server" "main" {
     acme_email               = var.acme_email
     llm_gateway_url          = var.llm_gateway_url
     llm_gateway_upstream     = var.llm_gateway_upstream
+    ocr_gateway_upstream     = var.ocr_gateway_upstream
     llm_gateway_path         = var.llm_gateway_path
     ocr_gateway_path         = var.ocr_gateway_path
     inactivity_timeout       = var.inactivity_timeout

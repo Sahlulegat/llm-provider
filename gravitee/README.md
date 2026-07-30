@@ -3,6 +3,10 @@
 Stack Gravitee APIM **indépendante** de la stack LLM (projet compose séparé `gravitee-apim`),
 placée en coupure devant Ollama et PaddleOCR : tout le trafic LLM/OCR passe par la gateway.
 
+📚 **Documentation** :
+- [DOCUMENTATION.md](DOCUMENTATION.md) — référence : ce qui change vs l'ancien fonctionnement, composants, variables, licence CE/EE, dépannage
+- [TUTORIALS.md](TUTORIALS.md) — pas-à-pas : démarrage et vérifications, policies en CE, activation de la licence EE et features IA, migration vers le Gravitee hosté
+
 ## ⚠️ Fonctionnalités IA et licence (état vérifié le 2026-07-29, APIM 4.12)
 
 Les fonctionnalités IA de Gravitee (**AI Agent Management / Agent Mesh**) exigent une

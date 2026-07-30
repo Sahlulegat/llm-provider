@@ -229,6 +229,12 @@ variable "llm_gateway_upstream" {
   default     = ""
 }
 
+variable "ocr_gateway_upstream" {
+  description = "Gravitee gateway upstream (host:port or URL) used by Caddy for OCR traffic. Empty = local default"
+  type        = string
+  default     = ""
+}
+
 variable "llm_gateway_path" {
   description = "Context path of the LLM proxy API on the Gravitee gateway"
   type        = string

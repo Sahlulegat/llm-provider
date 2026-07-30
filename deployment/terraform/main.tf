@@ -171,6 +171,10 @@ resource "upcloud_server" "main" {
     webui_auth               = var.webui_auth
     domain_name              = var.domain_name
     acme_email               = var.acme_email
+    llm_gateway_url          = var.llm_gateway_url
+    llm_gateway_upstream     = var.llm_gateway_upstream
+    llm_gateway_path         = var.llm_gateway_path
+    ocr_gateway_path         = var.ocr_gateway_path
     inactivity_timeout       = var.inactivity_timeout
     allowed_ips              = var.allowed_ips
     caddy_api_key            = var.caddy_api_key

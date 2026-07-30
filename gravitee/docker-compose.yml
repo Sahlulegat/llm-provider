@@ -1,0 +1,127 @@
+# Stack Gravitee APIM autonome (projet compose indépendant de la stack LLM).
+# CE par défaut ; déposer une license.key valide pour débloquer les features EE/IA.
+name: gravitee-apim
+
+networks:
+  gravitee:
+    name: gravitee-network
+  llm-network:
+    external: true
+    name: ${LLM_STACK_NETWORK:-llm-provider-network}
+
+services:
+  mongodb:
+    image: mongo:${MONGO_VERSION:-7.0}
+    container_name: gravitee-mongodb
+    restart: unless-stopped
+    volumes:
+      - ./data/mongodb:/data/db
+    networks:
+      - gravitee
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION:-8.16.1}
+    container_name: gravitee-elasticsearch
+    restart: unless-stopped
+    volumes:
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=0.0.0.0
+      - xpack.security.enabled=false
+      - cluster.name=elasticsearch
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - gravitee
+
+  gateway:
+    image: graviteeio/apim-gateway:${APIM_VERSION:-4.12}
+    container_name: gravitee-gateway
+    restart: unless-stopped
+    ports:
+      - "${GRAVITEE_GATEWAY_PORT:-8082}:8082"
+    depends_on:
+      mongodb:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./data/apim-gateway/logs:/opt/graviteeio-gateway/logs
+      - ./data/apim-gateway/plugins:/opt/graviteeio-gateway/plugins-ext
+      - ./license.key:/opt/graviteeio-gateway/license/license.key
+    environment:
+      - gravitee_management_mongodb_uri=mongodb://mongodb:27017/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_ratelimit_mongodb_uri=mongodb://mongodb:27017/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_reporters_elasticsearch_endpoints_0=http://elasticsearch:9200
+      - gravitee_plugins_path_0=/opt/graviteeio-gateway/plugins
+      - gravitee_plugins_path_1=/opt/graviteeio-gateway/plugins-ext
+    networks:
+      - gravitee
+      - llm-network
+
+  management-api:
+    image: graviteeio/apim-management-api:${APIM_VERSION:-4.12}
+    container_name: gravitee-management-api
+    restart: unless-stopped
+    ports:
+      - "${GRAVITEE_MGMT_API_PORT:-8083}:8083"
+    depends_on:
+      mongodb:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./data/apim-management-api/logs:/opt/graviteeio-management-api/logs
+      - ./data/apim-management-api/plugins:/opt/graviteeio-management-api/plugins-ext
+      - ./license.key:/opt/graviteeio-management-api/license/license.key
+    environment:
+      - gravitee_management_mongodb_uri=mongodb://mongodb:27017/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+      - gravitee_analytics_elasticsearch_endpoints_0=http://elasticsearch:9200
+      - gravitee_installation_standalone_portal_url=http://localhost:${GRAVITEE_PORTAL_PORT:-8085}
+      - gravitee_plugins_path_0=/opt/graviteeio-management-api/plugins
+      - gravitee_plugins_path_1=/opt/graviteeio-management-api/plugins-ext
+    networks:
+      - gravitee
+
+  management-ui:
+    image: graviteeio/apim-management-ui:${APIM_VERSION:-4.12}
+    container_name: gravitee-management-ui
+    restart: unless-stopped
+    ports:
+      - "${GRAVITEE_CONSOLE_PORT:-8084}:8080"
+    depends_on:
+      - management-api
+    volumes:
+      - ./data/apim-management-ui/logs:/var/log/nginx
+    environment:
+      - MGMT_API_URL=http://localhost:${GRAVITEE_MGMT_API_PORT:-8083}/management/organizations/DEFAULT/environments/DEFAULT/
+    networks:
+      - gravitee
+
+  portal-ui:
+    image: graviteeio/apim-portal-ui:${APIM_VERSION:-4.12}
+    container_name: gravitee-portal-ui
+    restart: unless-stopped
+    profiles: ["portal"]
+    ports:
+      - "${GRAVITEE_PORTAL_PORT:-8085}:8080"
+    depends_on:
+      - management-api
+    volumes:
+      - ./data/apim-portal-ui/logs:/var/log/nginx
+    environment:
+      - PORTAL_API_URL=http://localhost:${GRAVITEE_MGMT_API_PORT:-8083}/portal/environments/DEFAULT
+    networks:
+      - gravitee

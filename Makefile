@@ -1,5 +1,6 @@
 .PHONY: help start stop restart status logs test pull-model clean \
-        monitor-status monitor-logs monitor-test monitor-enable monitor-disable
+        monitor-status monitor-logs monitor-test monitor-enable monitor-disable \
+        gravitee-start gravitee-stop gravitee-bootstrap gravitee-logs gravitee-status
 
 help:
 	@echo "LLM Provider - Available Commands"
@@ -13,6 +14,13 @@ help:
 	@echo "  make test         - Test the model"
 	@echo "  make pull-model   - Pull the configured model"
 	@echo "  make clean        - Remove all containers and volumes (WARNING: deletes data)"
+	@echo ""
+	@echo "Gravitee AI Gateway (stack indépendante, voir gravitee/README.md):"
+	@echo "  make gravitee-start     - Start Gravitee APIM (requires main stack network)"
+	@echo "  make gravitee-bootstrap - Create/deploy LLM + OCR proxy APIs on the gateway"
+	@echo "  make gravitee-stop      - Stop Gravitee APIM"
+	@echo "  make gravitee-status    - Gravitee containers status"
+	@echo "  make gravitee-logs      - Gravitee gateway logs"
 	@echo ""
 	@echo "Auto-Shutdown Monitoring (Cost Optimization):"
 	@echo "  make monitor-status   - Check auto-shutdown monitor status"
@@ -53,6 +61,25 @@ clean:
 		rm -rf data/ logs/; \
 		echo "Clean completed"; \
 	fi
+
+# ============================================
+# Gravitee AI Gateway Commands
+# ============================================
+
+gravitee-start:
+	@bash gravitee/scripts/start.sh
+
+gravitee-bootstrap:
+	@bash gravitee/scripts/bootstrap-apis.sh
+
+gravitee-stop:
+	@cd gravitee && docker compose down
+
+gravitee-status:
+	@cd gravitee && docker compose ps
+
+gravitee-logs:
+	@cd gravitee && docker compose logs -f gateway
 
 # ============================================
 # Auto-Shutdown Monitoring Commands

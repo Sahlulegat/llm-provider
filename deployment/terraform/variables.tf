@@ -217,6 +217,30 @@ variable "acme_email" {
   default     = ""
 }
 
+variable "llm_gateway_url" {
+  description = "Gravitee gateway base URL for LLM traffic (hosted enterprise gateway in cloud). Empty = local default"
+  type        = string
+  default     = ""
+}
+
+variable "llm_gateway_upstream" {
+  description = "Gravitee gateway upstream (host:port or URL) used by Caddy. Empty = local default"
+  type        = string
+  default     = ""
+}
+
+variable "llm_gateway_path" {
+  description = "Context path of the LLM proxy API on the Gravitee gateway"
+  type        = string
+  default     = "/llm"
+}
+
+variable "ocr_gateway_path" {
+  description = "Context path of the OCR proxy API on the Gravitee gateway"
+  type        = string
+  default     = "/ocr"
+}
+
 variable "inactivity_timeout" {
   description = "Inactivity timeout in seconds before auto-shutdown (default 1 hour)"
   type        = number

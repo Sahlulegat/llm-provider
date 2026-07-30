@@ -90,6 +90,10 @@ runcmd:
     WEBUI_AUTH=${webui_auth}
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
+    LLM_GATEWAY_URL=${llm_gateway_url}
+    LLM_GATEWAY_UPSTREAM=${llm_gateway_upstream}
+    LLM_GATEWAY_PATH=${llm_gateway_path}
+    OCR_GATEWAY_PATH=${ocr_gateway_path}
     ALLOWED_IPS=${allowed_ips}
     CADDY_API_KEY=${caddy_api_key}
     CROWDSEC_BOUNCER_KEY=${crowdsec_bouncer_key}

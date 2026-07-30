@@ -1,5 +1,10 @@
 # Environment variables
 .env
+gravitee/.env
+
+# Gravitee (licence entreprise + données locales)
+gravitee/license.key
+gravitee/data/
 
 # Data directory (models can be large)
 data/

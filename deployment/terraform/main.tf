@@ -171,11 +171,12 @@ resource "upcloud_server" "main" {
     webui_auth               = var.webui_auth
     domain_name              = var.domain_name
     acme_email               = var.acme_email
+    gravitee_gateway_host    = var.gravitee_gateway_host
+    gravitee_api_key         = var.gravitee_api_key
     llm_gateway_url          = var.llm_gateway_url
-    llm_gateway_upstream     = var.llm_gateway_upstream
-    ocr_gateway_upstream     = var.ocr_gateway_upstream
-    llm_gateway_path         = var.llm_gateway_path
-    ocr_gateway_path         = var.ocr_gateway_path
+    origin_api_key           = var.origin_api_key
+    llm_origin_upstream      = var.llm_origin_upstream
+    ocr_origin_upstream      = var.ocr_origin_upstream
     inactivity_timeout       = var.inactivity_timeout
     allowed_ips              = var.allowed_ips
     caddy_api_key            = var.caddy_api_key

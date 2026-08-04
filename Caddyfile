@@ -32,6 +32,8 @@ http://ui.{$DOMAIN_NAME:localhost} {
     }
 }
 
+# Origin LLM : PAS une entrée client. Seule la gateway Gravitee connaît ORIGIN_API_KEY.
+# Les clients passent par la gateway cloud, qui vient taper ici.
 http://api.{$DOMAIN_NAME:localhost} {
     log {
         output file /data/api-access.log
@@ -40,10 +42,9 @@ http://api.{$DOMAIN_NAME:localhost} {
 
     route {
         crowdsec
-        @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
+        @unauthorized not header X-Origin-Key "{$ORIGIN_API_KEY}"
         respond @unauthorized "Unauthorized" 401
-        rewrite * {$LLM_GATEWAY_PATH:/llm}{uri}
-        reverse_proxy {$LLM_GATEWAY_UPSTREAM:gravitee-gateway:8082} {
+        reverse_proxy {$LLM_ORIGIN_UPSTREAM:ollama:11434} {
             transport http {
                 dial_timeout 30s
                 read_timeout 600s
@@ -58,6 +59,27 @@ http://api.{$DOMAIN_NAME:localhost} {
     }
 }
 
+# Egress interne : Open WebUI ne sait pas envoyer de header custom sur OLLAMA_BASE_URL.
+# Ce port non publié injecte la clé d'abonnement et sort vers la gateway cloud.
+http://:8081 {
+    log {
+        output file /data/egress-access.log
+        format json
+    }
+
+    reverse_proxy {$GRAVITEE_GATEWAY_HOST}:443 {
+        transport http {
+            tls
+            dial_timeout 30s
+            read_timeout 600s
+            write_timeout 600s
+        }
+        header_up Host {$GRAVITEE_GATEWAY_HOST}
+        header_up X-Gravitee-Api-Key {$GRAVITEE_API_KEY}
+    }
+}
+
+# Origin OCR : idem api.* — accessible uniquement depuis la gateway Gravitee
 http://ocr.{$DOMAIN_NAME:localhost} {
     log {
         output file /data/ocr-access.log
@@ -66,10 +88,9 @@ http://ocr.{$DOMAIN_NAME:localhost} {
 
     route {
         crowdsec
-        @unauthorized not header X-API-Key "{$CADDY_API_KEY}"
+        @unauthorized not header X-Origin-Key "{$ORIGIN_API_KEY}"
         respond @unauthorized "Unauthorized" 401
-        rewrite * {$OCR_GATEWAY_PATH:/ocr}{uri}
-        reverse_proxy {$OCR_GATEWAY_UPSTREAM:gravitee-gateway:8082} {
+        reverse_proxy {$OCR_ORIGIN_UPSTREAM:paddleocr-vl-api:8080} {
             transport http {
                 dial_timeout 30s
                 read_timeout 300s

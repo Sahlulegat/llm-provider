@@ -217,34 +217,42 @@ variable "acme_email" {
   default     = ""
 }
 
+variable "gravitee_gateway_host" {
+  description = "Hostname of the hosted Gravitee Cloud gateway, no scheme (sole client entrypoint)"
+  type        = string
+  default     = ""
+}
+
+variable "gravitee_api_key" {
+  description = "Gravitee API Key plan subscription key, injected by the Caddy egress route for Open WebUI"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "llm_gateway_url" {
-  description = "Gravitee gateway base URL for LLM traffic (hosted enterprise gateway in cloud). Empty = local default"
+  description = "Caddy egress route consumed by Open WebUI as OLLAMA_BASE_URL"
   type        = string
+  default     = "http://caddy:8081/llm"
+}
+
+variable "origin_api_key" {
+  description = "Secret presented by Gravitee (X-Origin-Key) to reach the api.*/ocr.* origins. Must differ from caddy_api_key"
+  type        = string
+  sensitive   = true
   default     = ""
 }
 
-variable "llm_gateway_upstream" {
-  description = "Gravitee gateway upstream (host:port or URL) used by Caddy. Empty = local default"
+variable "llm_origin_upstream" {
+  description = "Backend served by the api.* origin"
   type        = string
-  default     = ""
+  default     = "ollama:11434"
 }
 
-variable "ocr_gateway_upstream" {
-  description = "Gravitee gateway upstream (host:port or URL) used by Caddy for OCR traffic. Empty = local default"
+variable "ocr_origin_upstream" {
+  description = "Backend served by the ocr.* origin"
   type        = string
-  default     = ""
-}
-
-variable "llm_gateway_path" {
-  description = "Context path of the LLM proxy API on the Gravitee gateway"
-  type        = string
-  default     = "/llm"
-}
-
-variable "ocr_gateway_path" {
-  description = "Context path of the OCR proxy API on the Gravitee gateway"
-  type        = string
-  default     = "/ocr"
+  default     = "paddleocr-vl-api:8080"
 }
 
 variable "inactivity_timeout" {

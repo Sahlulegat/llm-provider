@@ -90,11 +90,12 @@ runcmd:
     WEBUI_AUTH=${webui_auth}
     DOMAIN_NAME=${domain_name}
     ACME_EMAIL=${acme_email}
+    GRAVITEE_GATEWAY_HOST=${gravitee_gateway_host}
+    GRAVITEE_API_KEY=${gravitee_api_key}
     LLM_GATEWAY_URL=${llm_gateway_url}
-    LLM_GATEWAY_UPSTREAM=${llm_gateway_upstream}
-    OCR_GATEWAY_UPSTREAM=${ocr_gateway_upstream}
-    LLM_GATEWAY_PATH=${llm_gateway_path}
-    OCR_GATEWAY_PATH=${ocr_gateway_path}
+    ORIGIN_API_KEY=${origin_api_key}
+    LLM_ORIGIN_UPSTREAM=${llm_origin_upstream}
+    OCR_ORIGIN_UPSTREAM=${ocr_origin_upstream}
     ALLOWED_IPS=${allowed_ips}
     CADDY_API_KEY=${caddy_api_key}
     CROWDSEC_BOUNCER_KEY=${crowdsec_bouncer_key}

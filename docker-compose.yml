@@ -26,8 +26,8 @@ services:
     volumes:
       - ./data/open-webui:/app/backend/data
     environment:
-      # Trafic LLM via la gateway Gravitee (locale par défaut, hostée via LLM_GATEWAY_URL)
-      - OLLAMA_BASE_URL=${LLM_GATEWAY_URL:-http://gravitee-gateway:8082/llm}
+      # Trafic LLM via la gateway Gravitee cloud, atteinte par la route d'egress Caddy
+      - OLLAMA_BASE_URL=${LLM_GATEWAY_URL:-http://caddy:8081/llm}
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-changeme-generate-a-secure-key}
       - WEBUI_NAME=${WEBUI_NAME:-LLM Chat}
       - ENABLE_SIGNUP=${ENABLE_SIGNUP:-true}
@@ -115,11 +115,11 @@ services:
       - ALLOWED_IPS=${ALLOWED_IPS:-0.0.0.0/0}
       - CADDY_API_KEY=${CADDY_API_KEY}
       - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
-      - LLM_GATEWAY_UPSTREAM=${LLM_GATEWAY_UPSTREAM:-gravitee-gateway:8082}
-      - OCR_GATEWAY_UPSTREAM=${OCR_GATEWAY_UPSTREAM:-gravitee-gateway:8082}
-      # Syntaxe ${VAR-def} (pas :-) : une valeur vide explicite désactive le rewrite (bypass gateway)
-      - LLM_GATEWAY_PATH=${LLM_GATEWAY_PATH-/llm}
-      - OCR_GATEWAY_PATH=${OCR_GATEWAY_PATH-/ocr}
+      - ORIGIN_API_KEY=${ORIGIN_API_KEY}
+      - LLM_ORIGIN_UPSTREAM=${LLM_ORIGIN_UPSTREAM:-ollama:11434}
+      - OCR_ORIGIN_UPSTREAM=${OCR_ORIGIN_UPSTREAM:-paddleocr-vl-api:8080}
+      - GRAVITEE_GATEWAY_HOST=${GRAVITEE_GATEWAY_HOST}
+      - GRAVITEE_API_KEY=${GRAVITEE_API_KEY}
 
   crowdsec:
     image: crowdsecurity/crowdsec:latest
